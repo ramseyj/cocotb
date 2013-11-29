@@ -57,20 +57,6 @@ class AvalonMM(BusDriver):
         self.bus.read.setimmediatevalue(0)
         self.bus.write.setimmediatevalue(0)
         self.bus.address.setimmediatevalue(0)
-
-    def read(self, address):
-        pass
-
-
-    def write(self, address, value):
-        pass
-
-class AvalonMaster(AvalonMM):
-    """Avalon-MM master
-    """
-    def __init__(self, entity, name, clock):
-        AvalonMM.__init__(self, entity, name, clock)
-        self.log.debug("AvalonMaster created")
         self.busy_event = Event("%s_busy" % name)
         self.busy = False
 
@@ -84,6 +70,19 @@ class AvalonMaster(AvalonMM):
     def _release_lock(self):
         self.busy = False
         self.busy_event.set()
+
+    def read(self, address):
+        pass
+
+    def write(self, address, value):
+        pass
+
+class AvalonMaster(AvalonMM):
+    """Avalon-MM master
+    """
+    def __init__(self, entity, name, clock):
+        AvalonMM.__init__(self, entity, name, clock)
+        self.log.debug("AvalonMaster created")
 
     @coroutine
     def read(self, address):
@@ -139,6 +138,60 @@ class AvalonMaster(AvalonMM):
         yield RisingEdge(self.clock)
         self.bus.write <= 0
         self._release_lock()
+
+class AvalonPLMaster(AvalonMM):
+    _signals = ["readdatavalid", "readdata", "read", "write", "waitrequest", "writedata", "address"]
+
+    def __init__(self, entity, name, clock):
+        AvalonMM.__init__(self, entity, name, clock)
+        self.log.debug("AvalonPLMaster created")
+
+    @coroutine
+    def read(self, address):
+        """
+        Issue a request to the bus and block until this
+        comes back. Simulation time still progresses
+        but syntactically it blocks.
+        See http://www.altera.com/literature/manual/mnl_avalon_spec_1_3.pdf
+        """
+        yield self._acquire_lock()
+
+        # Apply values for next clock edge
+        yield RisingEdge(self.clock)
+        self.bus.address <= address
+
+        self.log.info("Before waitrequest")
+
+        # Wait for waitrequest to be low
+        yield self._wait_for_nsignal(self.bus.waitrequest)
+
+        self.log.info("Back from waitrequest");
+
+        self.bus.read <= 1
+
+        yield RisingEdge(self.clock)
+
+        # Deassert read
+        self.bus.read <= 0
+
+        yield RisingEdge(self.bus.readdatavalid)
+
+        self.log.info("Back from readdatavalid");
+
+        # Get the data
+        yield ReadOnly()
+        data = self.bus.readdata.value
+
+        self.log.info("data is 0x%08X" % data.integer);
+
+        yield NextTimeStep()
+
+        self._release_lock()
+        raise ReturnValue(data)
+
+
+    def write(self, address, value):
+        pass
 
 
 class AvalonSlave(AvalonMM):
