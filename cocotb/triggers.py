@@ -192,6 +192,7 @@ class RisingEdge(Edge):
             if self.signal.value:
                 self._callback(self)
             else:
+                simulator.deregister_callback(self.cbhdl)
                 if simulator.register_value_change_callback(self.cbhdl, self.signal._handle, _check, self):
                     raise_error(self, "Unable set up %s Trigger" % (str(self)))
 
@@ -221,9 +222,9 @@ class ClockCycles(Edge):
                     self._callback(self)
                     return
 
+            simulator.deregister_callback(self.cbhdl)
             if simulator.register_value_change_callback(self.cbhdl, self.signal._handle, _check, self):
                 raise_error(self, "Unable set up %s Trigger" % (str(self)))
-
 
         if simulator.register_value_change_callback(self.cbhdl, self.signal._handle, _check, self):
             raise_error(self, "Unable set up %s Trigger" % (str(self)))
