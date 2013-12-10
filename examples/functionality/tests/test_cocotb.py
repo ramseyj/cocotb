@@ -251,7 +251,7 @@ def test_timeout_fail(dut):
     yield clock_gen(dut.clk, period=2000)
     yield RisingEdge(dut.clk)
 
-@cocotb.test(timeout=1000)
+@cocotb.test(timeout=750)
 def test_timeout_pass(dut):
     """Tests that a timeout does not fail a test that has activity"""
     yield clock_gen(dut.clk, period=500)
