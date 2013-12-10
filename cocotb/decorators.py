@@ -171,6 +171,7 @@ class RunningTest(RunningCoroutine):
         self.expect_fail = parent.expect_fail
         self.expect_error = parent.expect_error
         self.skip = parent.skip
+        self.timeout = parent.timeout
 
         self.handler = RunningTest.ErrorLogHandler(self._handle_error_message)
         cocotb.log.addHandler(self.handler)
@@ -321,7 +322,7 @@ class test(coroutine):
 
     KWargs:
         timeout: (int)
-            value representing simulation timeout (not implemented)
+            value representing simulation timeout
         expect_fail: (bool):
             Don't mark the result as a failure if the test fails
         expect_error: (bool):

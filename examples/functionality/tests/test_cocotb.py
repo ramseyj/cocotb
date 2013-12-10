@@ -86,13 +86,13 @@ def test_function_reentrant_clock(dut):
 
 
 @cocotb.coroutine
-def clock_gen(clock):
+def clock_gen(clock, period=100):
     """Example clock gen for test use"""
     for i in range(5):
         clock <= 0
-        yield Timer(100)
+        yield Timer(period)
         clock <= 1
-        yield Timer(100)
+        yield Timer(period)
     clock.log.warning("Clock generator finished!")
 
 @cocotb.test(expect_fail=False)
@@ -245,3 +245,13 @@ def test_fork_syntax_error(dut):
     cocotb.fork(syntax_error())
     yield clock_gen(dut.clk)
 
+@cocotb.test(timeout=1000, expect_fail=True)
+def test_timeout_fail(dut):
+    """Tests that given a timeout and no activity the test fails"""
+    yield clock_gen(dut.clk, period=2000)
+    yield RisingEdge(dut.clk)
+
+@cocotb.test(timeout=1000)
+def test_timeout_pass(dut):
+    """Tests that a timeout does not fail a test that has activity"""
+    yield clock_gen(dut.clk, period=500)

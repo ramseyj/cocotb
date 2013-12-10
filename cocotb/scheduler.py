@@ -38,12 +38,14 @@ import threading
 import time
 import pdb
 
+import logging
+
 import simulator
 import cocotb
 import cocotb.decorators
 from cocotb.triggers import Trigger, Timer, ReadOnly, NextTimeStep, ReadWrite, RisingEdge
 from cocotb.log import SimLog
-from cocotb.result import TestComplete, TestError, ReturnValue, raise_error
+from cocotb.result import TestComplete, TestError, TestFailure, ReturnValue, raise_error
 from threading import RLock
 
 class Scheduler(object):
@@ -66,6 +68,9 @@ class Scheduler(object):
         self._external = False
         self._readonly = False
         self._react_timer = None
+        self._test_timer = None
+        self._test_timeout_val = 0
+        self.log.setLevel(logging.DEBUG)
         # Keep this last
         self._readwrite = self.add(self.move_to_rw())
 
@@ -75,6 +80,12 @@ class Scheduler(object):
             trigger and schedule them.
         """
         trigger.log.debug("Fired!")
+
+        if self._test_timer:
+            # A timer is set, if it has not popped then kill and re-add
+            # this could change to a reprime operation
+            self._test_timer.kill()
+            self._test_timer = None
 
         if isinstance(trigger, ReadOnly):
             self.enable_react_delay()
@@ -134,6 +145,9 @@ class Scheduler(object):
                 self.add(coroutine)
                 self._entry_lock.acquire()
             self._entry_lock.release()
+
+        if self._test_timer is None and self._test_timeout_val is not 0 and  self._test_timer_fired is False:
+            self._test_timer = self.add(self.test_coro_timer())
 
         return
 
@@ -206,9 +220,16 @@ class Scheduler(object):
             self.cleanup()
             return
 
-
-        self.log.debug("Queuing new coroutine %s" % coroutine.__name__)
-        self.log.debug("Adding  %s" % coroutine.__name__)
+        if hasattr(coroutine, 'timeout') and coroutine.timeout is not None:
+            if self._test_timer is None:
+                self._test_timer_fired = False
+                self._test_timeout_val = coroutine.timeout
+                self._test_timer = self.add(self.test_coro_timer())
+            else:
+                self.log.critical("Timer still running from last test!")
+            self.log.debug("Adding %s with timeout=%d" % (coroutine.__name__, coroutine.timeout))
+        else:
+            self.log.debug("Adding %s" % coroutine.__name__)
         self.schedule(coroutine)
         return coroutine
 
@@ -359,6 +380,7 @@ class Scheduler(object):
 
         self.issue_result(self._test_result)
         self._test_result = None
+        self._test_timer = None
 
         # If another test was added to queue kick it off
         self._terminate = False
@@ -391,3 +413,8 @@ class Scheduler(object):
         self._react_timer = None
         self._readonly = False
 
+    @cocotb.decorators.coroutine
+    def test_coro_timer(self):
+        yield Timer(self._test_timeout_val)
+        raise TestFailure("Test timeout expired (%d)" % self._test_timeout_val)
+        self._test_timer_fired = True
