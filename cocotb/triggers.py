@@ -83,7 +83,7 @@ class GPITrigger(Trigger):
     """
     def __init__(self):
         Trigger.__init__(self)
-        self.cbhdl = None
+        self.cbhdl = simulator.create_callback(self)
 
     def unprime(self):
         """Unregister a prior registered timed callback"""
@@ -112,7 +112,6 @@ class Timer(GPITrigger):
 
     def prime(self, callback):
         """Register for a timed callback"""
-        self.cbhdl = simulator.create_callback(self)
         if simulator.register_timed_callback(self.cbhdl, self.time_ps, callback, self):
             raise_error(self, "Unable set up %s Trigger" % (str(self)))
 
@@ -129,7 +128,6 @@ class Edge(GPITrigger):
 
     def prime(self, callback):
         """Register notification of a value change via a callback"""
-        self.cbhdl = simulator.create_callback(self)
         if simulator.register_value_change_callback(self.cbhdl, self.signal._handle, callback, self):
             raise_error(self, "Unable set up %s Trigger" % (str(self)))
 
@@ -145,7 +143,6 @@ class ReadOnly(GPITrigger):
         GPITrigger.__init__(self)
 
     def prime(self, callback):
-        self.cbhdl = simulator.create_callback(self)
         if simulator.register_readonly_callback(self.cbhdl, callback, self):
             raise_error(self, "Unable set up %s Trigger" % (str(self)))
 
@@ -161,7 +158,6 @@ class ReadWrite(GPITrigger):
         GPITrigger.__init__(self)
 
     def prime(self, callback):
-        self.cbhdl = simulator.create_callback(self)
         if simulator.register_rwsynch_callback(self.cbhdl, callback, self):
             raise_error(self, "Unable set up %s Trigger" % (str(self)))
 
@@ -176,7 +172,6 @@ class NextTimeStep(GPITrigger):
         GPITrigger.__init__(self)
 
     def prime(self, callback):
-        self.cbhdl = simulator.create_callback(self)
         simulator.register_nextstep_callback(self.cbhdl, callback, self)
 
     def __str__(self):
@@ -200,11 +195,10 @@ class RisingEdge(Edge):
                 self._callback(self)
             else:
                 simulator.deregister_callback(self.cbhdl)
-                self.cbhdl = simulator.create_callback(self)
                 if simulator.register_value_change_callback(self.cbhdl, self.signal._handle, _check, self):
                     raise_error(self, "Unable set up %s Trigger" % (str(self)))
 
-        self.cbhdl = simulator.create_callback(self)
+	simulator.deregister_callback(self.cbhdl)
         if simulator.register_value_change_callback(self.cbhdl, self.signal._handle, _check, self):
             raise_error(self, "Unable set up %s Trigger" % (str(self)))
 
@@ -232,11 +226,10 @@ class ClockCycles(Edge):
                     return
 
             simulator.deregister_callback(self.cbhdl)
-            self.cbhdl = simulator.create_callback(self)
             if simulator.register_value_change_callback(self.cbhdl, self.signal._handle, _check, self):
                 raise_error(self, "Unable set up %s Trigger" % (str(self)))
 
-        self.cbhdl = simulator.create_callback(self)
+	simulator.deregister_callback(self.cbhdl)
         if simulator.register_value_change_callback(self.cbhdl, self.signal._handle, _check, self):
             raise_error(self, "Unable set up %s Trigger" % (str(self)))
 
