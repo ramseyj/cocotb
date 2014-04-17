@@ -220,6 +220,11 @@ static inline int __gpi_register_cb(p_vhpi_cb_user_data user, vhpiCbDataT *cb_da
 
     user->cb_hdl = new_hdl;
 
+    vhpiStateT cbState = vhpi_get(vhpiStateP, new_hdl);
+    if (cbState != vhpiEnable) {
+        printf("VHPI ERROR: Registered callback isn't enabled! Got %d\n", cbState);
+    }
+
     return ret;
 }
 
@@ -241,6 +246,13 @@ static inline void __gpi_free_callback(gpi_sim_hdl gpi_hdl)
 
     free(user_data);
     FEXIT
+}
+
+void *gpi_get_callback_data(gpi_sim_hdl gpi_hdl)
+{
+    p_vhpi_cb_user_data user_data;
+    user_data = gpi_container_of(gpi_hdl, s_vhpi_cb_user_data, gpi_hdl);
+    return user_data->gpi_cb_data;
 }
 
 void gpi_free_handle(gpi_sim_hdl gpi_hdl)
@@ -652,8 +664,10 @@ static void handle_vhpi_callback(const vhpiCbDataT *cb_data)
     old_cb = user_data->cb_hdl;
     rv = user_data->gpi_function(user_data->gpi_cb_data);
 
-    if (old_cb == user_data->cb_hdl)
-        gpi_deregister_callback(&user_data->gpi_hdl);
+//     if (old_cb == user_data->cb_hdl) {
+//         printf("This is screwing everything up?\n");
+//         gpi_deregister_callback(&user_data->gpi_hdl);
+//     }
 
     /* A request to delete could have been done
      * inside gpi_function
@@ -685,6 +699,7 @@ gpi_sim_hdl gpi_create_cb_handle(void)
     FEXIT
     return ret;
 }
+
 
 /* Destroys the memory associated with the sim handle
  * this can only be called on a handle that has been
@@ -744,20 +759,21 @@ static int gpi_free_one_time(p_vhpi_cb_user_data user_data)
     }
 
     // If the callback has not been called we also need to call
-    // remove as well
+    // remove.  If calling remove no call to release is required
     if (user_data->state == VHPI_PRIMED) {
         rc = vhpi_remove_cb(cb_hdl);
-        if (!rc) {
+        if (rc) {
             check_vhpi_error();
             return rc;
         }
-
+    } else {
         rc = vhpi_release_handle(cb_hdl);
-        if (!rc) {
+        if (rc) {
             check_vhpi_error();
             return rc;
         }
     }
+    
     FEXIT
     return rc;
 }

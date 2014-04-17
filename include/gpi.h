@@ -165,19 +165,24 @@ int gpi_register_readonly_callback               (gpi_sim_hdl, int (*gpi_functio
 int gpi_register_nexttime_callback               (gpi_sim_hdl, int (*gpi_function)(void *), void *gpi_cb_data);
 int gpi_register_readwrite_callback              (gpi_sim_hdl, int (*gpi_function)(void *), void *gpi_cb_data);
 
-// Calling convention is that 0 = success and negative numbers a failure
-// For implementers of GPI the provided macro GPI_RET(x) is provided
+
 gpi_sim_hdl gpi_create_cb_handle(void);
 void gpi_destroy_cb_handle(gpi_sim_hdl gpi_hdl);
 int gpi_deregister_callback(gpi_sim_hdl gpi_hdl);
 gpi_sim_hdl gpi_clock_register(gpi_sim_hdl sim_hdl, int period, unsigned int cycles);
 void gpi_clock_unregister(gpi_sim_hdl clock);
 
+// Calling convention is that 0 = success and negative numbers a failure
+// For implementers of GPI the provided macro GPI_RET(x) is provided
 #define GPI_RET(_code) \
     if (_code == 1) \
         return 0; \
     else \
         return -1
+
+// Because the internal structures may be different for different implementations
+// of GPI we provide a convenience function to extract the callback data
+void *gpi_get_callback_data(gpi_sim_hdl gpi_hdl);
 
 EXTERN_C_END
 

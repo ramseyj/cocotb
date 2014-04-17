@@ -50,6 +50,10 @@ typedef struct t_callback_data {
     gpi_sim_hdl cb_hdl;
 } s_callback_data, *p_callback_data;
 
+#define sim_container_of(_address, _type, _member)  \
+        ((_type *)((uintptr_t)(_address) -      \
+         (uintptr_t)(&((_type *)0)->_member)))
+
 static PyObject *log_msg(PyObject *self, PyObject *args);
 
 // Raise an exception on failure
@@ -66,6 +70,7 @@ static PyObject *register_value_change_callback(PyObject *self, PyObject *args);
 static PyObject *register_readonly_callback(PyObject *self, PyObject *args);
 static PyObject *register_nextstep_callback(PyObject *self, PyObject *args);
 static PyObject *register_rwsynch_callback(PyObject *self, PyObject *args);
+static PyObject *reenable_callback(PyObject *self, PyObject *args);
 static PyObject *create_clock(PyObject *self, PyObject *args);
 static PyObject *stop_clock(PyObject *self, PyObject *args);
 static PyObject *stop_simulator(PyObject *self, PyObject *args);
@@ -93,6 +98,7 @@ static PyMethodDef SimulatorMethods[] = {
     {"register_readonly_callback", register_readonly_callback, METH_VARARGS, "Register a callback for readonly section"},
     {"register_nextstep_callback", register_nextstep_callback, METH_VARARGS, "Register a cllback for the nextsimtime callback"},
     {"register_rwsynch_callback", register_rwsynch_callback, METH_VARARGS, "Register a callback for the readwrite section"},
+    {"reenable_callback", reenable_callback, METH_VARARGS, "Re-enable a recurring callback"},
     {"create_clock", create_clock, METH_VARARGS, "Register a clock object"},
     {"stop_clock", stop_clock, METH_VARARGS, "Terminate a clock"},
     {"stop_simulator", stop_simulator, METH_VARARGS, "Instruct the attached simulator to stop"},

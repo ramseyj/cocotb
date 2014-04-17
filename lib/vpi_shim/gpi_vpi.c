@@ -199,6 +199,13 @@ static inline void __gpi_free_callback(gpi_sim_hdl gpi_hdl)
     FEXIT
 }
 
+void *gpi_get_callback_data(gpi_sim_hdl gpi_hdl)
+{
+    p_vpi_cb_user_data user_data;
+    user_data = gpi_container_of(gpi_hdl, s_vpi_cb_user_data, gpi_hdl);
+    return user_data->gpi_cb_data;
+}
+
 void gpi_free_handle(gpi_sim_hdl gpi_hdl)
 {
     free(gpi_hdl);
