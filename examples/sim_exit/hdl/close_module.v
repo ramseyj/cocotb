@@ -61,6 +61,8 @@ initial begin
      #10 $warning("This is a  warning message");
      #10 $error;
      #10 $error("This is an error message");
+     #10 $display("This message does get formatted correctly: %d", 17);
+     #10 $error("This message doesn't get formatted correctly: %d", 17);
      #1000 $fatal(1, "This is a a fatal message that fails the test");
 end
 
