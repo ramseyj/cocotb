@@ -27,8 +27,16 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ##############################################################################
 
-ifeq ($(OS), CYGWIN)
-include $(SIM_ROOT)/makefiles/Makefile.rules.win32
-else
-include $(SIM_ROOT)/makefiles/Makefile.rules.linux
-endif
+
+# Disable some inbuild rules
+%: %.c
+%: %.o
+
+# Define some of our own
+$(LIB_NAME)_OBJS:= $(SRCS:%.c=$(LIB_OBJ_DIR)/%.o)
+
+$(LIB_OBJ_DIR)/%.o: %.c
+	gcc $(GCC_ARGS) -c -fpic $(INCLUDES) -o $@ $<
+
+$(LIB_DIR)/$(LIB_NAME).so: $($(LIB_NAME)_OBJS)
+	gcc $(GCC_ARGS) $(LINKER_ARGS) -o $@ $($(LIB_NAME)_OBJS) $(LIBS) $(foreach path,$(LD_PATH),-L$(path))

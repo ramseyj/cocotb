@@ -27,8 +27,19 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ##############################################################################
 
-ifeq ($(OS), CYGWIN)
-include $(SIM_ROOT)/makefiles/Makefile.rules.win32
-else
-include $(SIM_ROOT)/makefiles/Makefile.rules.linux
-endif
+
+# Disable some inbuild rules
+%: %.c
+%: %.o
+
+# Define some of our own
+$(LIB_NAME)_OBJS:= $(SRCS:%.c=$(LIB_OBJ_DIR)/%.o)
+
+$(LIB_OBJ_DIR)/%.o: %.c
+	gcc $(GCC_ARGS) -c $(INCLUDES) -o "$(call cygpath,$@)" $<
+
+$(LIB_DIR)/lib$(LIB_NAME).a: $(LIB_NAME).def
+	dlltool -d "$(call cygpath,$<)" -l "$(call cygpath,$@)"
+
+$(LIB_DIR)/$(LIB_NAME).$(SO_EXT): $($(LIB_NAME)_OBJS)
+	gcc $(GCC_ARGS) $(LINKER_ARGS) -o "$(call cygpath,$@)" $(foreach lib,$($(LIB_NAME)_OBJS),"$(call cygpath,$(lib))") $(LIBS) $(foreach path,$(LD_PATH),-L"$(call cygpath,$(path))")

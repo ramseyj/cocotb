@@ -39,11 +39,11 @@ SRCS        := simulatormodule.c
 
 CLIBS       += $(LIB_DIR)/$(LIB_NAME)
 
-$(LIB_DIR)/simulator.dll: $(LIB_DIR)/$(LIB_NAME).$(SO_EXT)
-	ln -sf $(LIB_NAME) $@
+$(LIB_DIR)/simulator.$(SO_EXT): $(LIB_DIR)/$(LIB_NAME).$(SO_EXT)
+	ln -sf $(LIB_NAME).$(SO_EXT) $@
 
 clean:
-	-@rm -rf $(LIB_DIR)/simulator.dll
+	-@rm -rf $(LIB_DIR)/simulator.$(SO_EXT)
 	-@rm -rf $(LIB_DIR)/$(LIB_NAME)
 
 include $(SIM_ROOT)/makefiles/Makefile.rules

@@ -44,6 +44,9 @@ ARCH?=$(shell uname -m)
 export ARCH
 
 OS=$(shell uname)
+ifeq ($(findstring CYGWIN, $(OS)), CYGWIN)
+     OS=CYGWIN
+endif
 export OS
 
 include $(SIM_ROOT)/makefiles/Makefile.paths
@@ -51,7 +54,7 @@ include $(SIM_ROOT)/makefiles/Makefile.pylib
 
 export LIB_DIR=$(BUILD_DIR)/libs/$(ARCH)
 export LIB_OBJ_DIR:= $(BUILD_DIR)/obj/$(ARCH)
-ifeq ($(findstring CYGWIN, $(OS)), CYGWIN)
+ifeq ($(OS), CYGWIN)
 SIM_ROOT_DOS := $(shell cygpath -d "$(SIM_ROOT)")
 INCLUDES := -I"$(SIM_ROOT_DOS)\include"
 else
@@ -61,15 +64,6 @@ endif
 INCLUDES += $(PYTHON_INCLUDEDIR)
 
 export INCLUDES
-
-# ifeq ($(findstring CYGWIN, $(OS)), CYGWIN)
-#      PYTHON_LIBDIR:=$(shell cygpath -u "$(PYTHON_LIBDIR)")
-#      PYTHON_DYNLIBDIR:=$(shell cygpath -u "$(PYTHON_DYNLIBDIR)")
-#      PYTHON_INCLUDEDIR:=-I$(shell cygpath -u "$(PYTHON_INCLUDEDIR)")
-# else
-#      PYTHON_INCLUDEDIR:=-I$(PYTHON_INCLUDEDIR)
-# endif
-
 
 # Base GCC flags
 ifeq ($(OS),Darwin)
@@ -90,12 +84,13 @@ else
 LINKER_ARGS := -shared -Xlinker -L$(PYTHON_LIBDIR)
 endif
 
-ifeq ($(findstring CYGWIN, $(OS)), CYGWIN)
+ifeq ($(OS), CYGWIN)
 export SO_EXT=dll
-export SLIB_EXT=a
 else
 export SO_EXT=so
-export SLIB_EXT=so
 endif
 
+ifeq ($(OS), CYGWIN)
+# Define function for converting paths to Windows format
 cygpath = $(shell cygpath -p -w "$(1)")
+endif

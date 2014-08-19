@@ -61,19 +61,23 @@ $(LIB_DIR)/libsim.$(SO_EXT): $(SIM_ROOT)/lib/simulator/simulatormodule.c | $(LIB
 	make -C $(SIM_ROOT)/lib/simulator
 
 $(LIB_DIR)/libgpilog.a: $(SIM_ROOT)/lib/gpi_log/gpilog.def | $(LIB_DIR)
-	make -C $(SIM_ROOT)/lib/gpi_log export
+	make -C $(SIM_ROOT)/lib/gpi_log $(LIB_DIR)/libgpilog.a
 
 $(LIB_DIR)/libgpi.a: $(SIM_ROOT)/lib/gpi_impl/gpi.def | $(LIB_DIR)
-	make -C $(SIM_ROOT)/lib/gpi_impl export
+	make -C $(SIM_ROOT)/lib/gpi_impl $(LIB_DIR)/libgpi.a
 
 $(LIB_DIR)/libcocotb.a: $(SIM_ROOT)/lib/embed/cocotb.def | $(LIB_DIR)
-	make -C $(SIM_ROOT)/lib/embed export
+	make -C $(SIM_ROOT)/lib/embed $(LIB_DIR)/libcocotb.a
 
-COCOTB_LIBS = $(LIB_DIR)/libgpilog.$(SO_EXT) \
-	      $(LIB_DIR)/libcocotb.a \
-	      $(LIB_DIR)/libgpi.$(SO_EXT) \
-	      $(LIB_DIR)/libcocotb.$(SO_EXT) \
-	      $(LIB_DIR)/libsim.$(SO_EXT)
+ifeq ($(OS), CYGWIN)
+COCOTB_LIBS = $(LIB_DIR)/libcocotb.a \
+	      $(LIB_DIR)/libgpi.a \
+	      $(LIB_DIR)/libgpilog.a
+endif
+COCOTB_LIBS += $(LIB_DIR)/libgpilog.$(SO_EXT) \
+	       $(LIB_DIR)/libgpi.$(SO_EXT) \
+	       $(LIB_DIR)/libcocotb.$(SO_EXT) \
+	       $(LIB_DIR)/libsim.$(SO_EXT)
 
 clean::
 	-@rm -rf $(BUILD_DIR)

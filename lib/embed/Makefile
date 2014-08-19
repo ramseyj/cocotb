@@ -36,11 +36,11 @@ LIBS		:= $(PYLIBS) -lgpilog -lgpi
 LD_PATH		:= $(LIB_DIR)
 SRCS		:= gpi_embed.c
 
-LIB_NAME	:= cocotb
+LIB_NAME	:= libcocotb
 
-all: $(LIB_DIR)/$(LIB_NAME).$(SO_EXT) export
+all: $(LIB_DIR)/$(LIB_NAME).$(SO_EXT)
 
-export: $(LIB_DIR)/lib$(LIB_NAME).a
+export: $(LIB_DIR)/$(LIB_NAME).a
 
 clean:
 	-@rm -rf $(OBJ_DIR)

@@ -33,9 +33,10 @@ INCLUDES    +=
 GCC_ARGS    += -DVPI_CHECKING $(EXTRA_GCC_ARGS)
 LIBS        := -lgpilog -lcocotb $(EXTRA_LIBS)
 LD_PATH     := $(LIB_DIR) $(EXTRA_LIBDIRS)
-LIB_NAME    := gpi
+LIB_NAME    := libgpi
 
 SRCS        := gpi_common.c gpi_vpi.c gpi_vhpi.c
+DEF_FILE    := gpi.def
 
 CLIBS       += $(LIB_DIR)/gpivpi.vpl
 
@@ -43,15 +44,13 @@ CLIBS       += $(LIB_DIR)/gpivpi.vpl
 # different simulators, icarus for instance loads a <name>.vpi libraray to use the vpi
 # inerface at the start of the simulation
 
-all: $(LIB_DIR)/gpivpi.vpl $(LIB_DIR)/cocotb.vpi export
-
-export: $(LIB_DIR)/lib$(LIB_NAME).a
+all: $(LIB_DIR)/gpivpi.vpl $(LIB_DIR)/cocotb.vpi
 
 $(LIB_DIR)/gpivpi.vpl: $(LIB_DIR)/$(LIB_NAME).$(SO_EXT)
-	ln -sf $(LIB_NAME) $@
+	ln -sf $(LIB_NAME).$(SO_EXT) $@
 
 $(LIB_DIR)/cocotb.vpi: $(LIB_DIR)/$(LIB_NAME).$(SO_EXT)
-	ln -sf $(LIB_NAME) $@
+	ln -sf $(LIB_NAME).$(SO_EXT) $@
 
 clean:
 	-@rm -rf $(LIB_DIR)/gpivpi.vpl
