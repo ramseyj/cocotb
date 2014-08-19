@@ -51,7 +51,24 @@ include $(SIM_ROOT)/makefiles/Makefile.pylib
 
 export LIB_DIR=$(BUILD_DIR)/libs/$(ARCH)
 export LIB_OBJ_DIR:= $(BUILD_DIR)/obj/$(ARCH)
-export INCLUDES := -I$(SIM_ROOT)/include $(PYTHON_INCLUDEDIR)
+ifeq ($(findstring CYGWIN, $(OS)), CYGWIN)
+SIM_ROOT_DOS := $(shell cygpath -d "$(SIM_ROOT)")
+INCLUDES := -I"$(SIM_ROOT_DOS)\include"
+else
+INCLUDES := -I$(SIM_ROOT)/include
+endif
+
+INCLUDES += $(PYTHON_INCLUDEDIR)
+
+export INCLUDES
+
+# ifeq ($(findstring CYGWIN, $(OS)), CYGWIN)
+#      PYTHON_LIBDIR:=$(shell cygpath -u "$(PYTHON_LIBDIR)")
+#      PYTHON_DYNLIBDIR:=$(shell cygpath -u "$(PYTHON_DYNLIBDIR)")
+#      PYTHON_INCLUDEDIR:=-I$(shell cygpath -u "$(PYTHON_INCLUDEDIR)")
+# else
+#      PYTHON_INCLUDEDIR:=-I$(PYTHON_INCLUDEDIR)
+# endif
 
 
 # Base GCC flags
@@ -60,7 +77,7 @@ GCC_ARGS    :=  -g -DDEBUG -fpic
 else
 GCC_ARGS	:=	-Werror -Wcast-qual -Wcast-align -Wwrite-strings \
 				-Waggregate-return -Wstrict-prototypes           \
-				-Wno-unused-parameter -fno-common -g -DDEBUG -fpic
+				-Wno-unused-parameter -fno-common -g -DDEBUG
 ifeq ($(ARCH),i686)
 GCC_ARGS    += -m32
 endif
@@ -70,5 +87,15 @@ endif
 ifeq ($(OS),Darwin)
 LINKER_ARGS := -shared -undefined suppress -flat_namespace -L$(PYTHON_LIBDIR)
 else
-LINKER_ARGS := -shared -Xlinker -export-dynamic -L$(PYTHON_LIBDIR)
+LINKER_ARGS := -shared -Xlinker -L$(PYTHON_LIBDIR)
 endif
+
+ifeq ($(findstring CYGWIN, $(OS)), CYGWIN)
+export SO_EXT=dll
+export SLIB_EXT=a
+else
+export SO_EXT=so
+export SLIB_EXT=so
+endif
+
+cygpath = $(shell cygpath -p -w "$(1)")

@@ -35,8 +35,10 @@ else
     CMD := vsimsa
 endif
 
-EXTRA_LIBS = -laldecpli -lstdc++ -lsupc++
-EXTRA_LIBDIRS = -L$(ALDEC_PATH)/bin/Linux64
+# EXTRA_LIBS = -laldecpli -lstdc++ -lsupc++
+# EXTRA_LIBDIRS = -L$(ALDEC_PATH)/bin/Linux64
+EXTRA_LIBS = -laldecpli -lstdc++
+EXTRA_LIBDIRS = $(ALDEC_PATH)/PLI/Lib
 
 ALOG_ARGS += +define+COCOTB_SIM -dbg -pli libgpi
 ACOM_ARGS += -dbg
@@ -50,7 +52,7 @@ ifeq ($(GPI_IMPL),vpi)
     GPI_ARGS = -pli libgpi
 endif
 ifeq ($(GPI_IMPL),vhpi)
-    GPI_ARGS = -loadvhpi $(LIB_DIR)/libgpi:vhpi_startup_routines_bootstrap
+    GPI_ARGS = -loadvhpi \"$(call cygpath,$(LIB_DIR)/gpi):vhpi_startup_routines_bootstrap\"
 endif
 
 ifndef GPI_ARGS
@@ -63,11 +65,12 @@ $(SIM_BUILD)/runsim.tcl : $(VERILOG_SOURCES) $(SIM_BUILD)
 	echo "alib work" > $@
 	echo "set worklib work" >> $@
 ifdef VHDL_SOURCES
-	echo "acom $(ACOM_ARGS) $(VHDL_SOURCES)" >> $@
+	echo "acom $(ACOM_ARGS) $(call cygpath,$(VHDL_SOURCES))" >> $@
 endif
 ifdef VERILOG_SOURCES
-	echo "alog $(ALOG_ARGS) $(VERILOG_SOURCES)" >> $@
+	echo "alog $(ALOG_ARGS) $(call cygpath,$(VERILOG_SOURCES))" >> $@
 endif
+	@echo "GPI_ARGS is $(GPI_ARGS)"
 ifdef SCRIPT_FILE
 	echo "do $(SCRIPT_FILE)" >> $@
 endif
@@ -89,9 +92,10 @@ endif
 # Note it's the redirection of the output rather than the 'do' command
 # that turns on batch mode (i.e. exit on completion/error)
 results.xml: $(SIM_BUILD)/runsim.tcl $(COCOTB_LIBS) $(CUSTOM_SIM_DEPS)
-	cd $(SIM_BUILD) && PYTHONPATH=$(LIB_DIR):$(SIM_ROOT):$(PWD):$(PYTHONPATH) \
-	LD_LIBRARY_PATH=$(LIB_DIR):$(VSIMSABIN)/Linux64:$(LD_LIBRARY_PATH) MODULE=$(MODULE) TESTCASE=$(TESTCASE) TOPLEVEL=$(TOPLEVEL) $(CMD) -do runsim.tcl | tee sim.log
+	cd $(SIM_BUILD) && PYTHONPATH="$(call cygpath,$(LIB_DIR):$(SIM_ROOT):$(PWD):$(PYTHONPATH))" \
+	PATH="$(LIB_DIR):$(ALDEC_PATH)/PLI/Lib:$(PATH)" MODULE=$(MODULE) TESTCASE=$(TESTCASE) TOPLEVEL=$(TOPLEVEL) $(CMD) -do runsim.tcl | tee sim.log
 
 clean::
 	rm -rf $(SIM_BUILD)
 
+EXTRA_GCC_ARGS = -D_ALDEC

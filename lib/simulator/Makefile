@@ -31,19 +31,19 @@ include $(SIM_ROOT)/makefiles/Makefile.inc
 
 INCLUDES    +=
 GCC_ARGS    +=
-LIBS        := -lgpi $(PYLIBS)
-LD_PATH     := -L$(LIB_DIR)
-LIB_NAME    := libsim.so
+LIBS        := -lcocotb -lgpilog -lgpi $(PYLIBS)
+LD_PATH     := $(LIB_DIR)
+LIB_NAME    := libsim
 
 SRCS        := simulatormodule.c
 
 CLIBS       += $(LIB_DIR)/$(LIB_NAME)
 
-$(LIB_DIR)/simulator.so: $(LIB_DIR)/$(LIB_NAME)
+$(LIB_DIR)/simulator.dll: $(LIB_DIR)/$(LIB_NAME).$(SO_EXT)
 	ln -sf $(LIB_NAME) $@
 
 clean:
-	-@rm -rf $(LIB_DIR)/simulator.so
+	-@rm -rf $(LIB_DIR)/simulator.dll
 	-@rm -rf $(LIB_DIR)/$(LIB_NAME)
 
 include $(SIM_ROOT)/makefiles/Makefile.rules

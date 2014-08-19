@@ -47,7 +47,15 @@ test:
 	./bin/combine_results.py
 
 pycode:
-	@cp -R $(SIM_ROOT)/cocotb $(FULL_INSTALL_DIR)/
+#	@cp -R $(SIM_ROOT)/cocotb $(FULL_INSTALL_DIR)/
+	@echo "Installing python packages to $(PYTHON_SITE_PACKAGES)"
+	@cp -R $(SIM_ROOT)/cocotb $(PYTHON_SITE_PACKAGES)
+
+lib_install:
+	@echo "Installing python simulator library to $(PYTHON_DYNLIBDIR)"
+	@cp $(LIB_DIR)/libsim.dll $(PYTHON_DYNLIBDIR)/simulator.pyd
+	@echo "Installing cocotb libraries to $(INSTALL_DIR)/lib"
+	@cp $(LIB_DIR)/cocotb.dll $(LIB_DIR)/gpi.dll $(LIB_DIR)/gpilog.dll $(INSTALL_DIR)/lib
 
 src_install:
 	@mkdir -p $(FULL_INSTALL_DIR)/lib
@@ -63,7 +71,9 @@ common_install:
 create_files:
 	bin/create_files.py $(FULL_INSTALL_DIR)
 
-install: src_install common_install pycode create_files
+install: pycode lib_install
+
+full_install: src_install common_install pycode create_files
 	@echo -e "\nInstalled to $(FULL_INSTALL_DIR)"
 	@echo -e "To uninstall run $(FULL_INSTALL_DIR)/bin/cocotb_uninstall\n"
 

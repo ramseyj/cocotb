@@ -1,0 +1,5 @@
+LIBRARY gpilog.dll
+EXPORTS
+gpi_log
+set_log_handler
+set_log_filter

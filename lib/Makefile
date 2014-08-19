@@ -46,24 +46,34 @@ $(LIB_OBJ_DIR):
 $(LIB_DIR): $(LIB_OBJ_DIR)
 	mkdir -p $@
 
-$(LIB_DIR)/libgpilog.so: $(SIM_ROOT)/lib/gpi_log/gpi_logging.c | $(LIB_DIR)
+$(LIB_DIR)/libgpilog.$(SO_EXT): $(SIM_ROOT)/lib/gpi_log/gpi_logging.c | $(LIB_DIR)
 	make -C $(SIM_ROOT)/lib/gpi_log
 
-$(LIB_DIR)/libcocotb.so: $(SIM_ROOT)/lib/embed/gpi_embed.c | $(LIB_DIR)
-	make -C $(SIM_ROOT)/lib/embed
-
-$(LIB_DIR)/libgpi.so: $(SIM_ROOT)/lib/gpi_impl/gpi_common.c \
+$(LIB_DIR)/libgpi.$(SO_EXT): $(SIM_ROOT)/lib/gpi_impl/gpi_common.c \
 		      $(SIM_ROOT)/lib/gpi_impl/gpi_vpi.c \
 		      $(SIM_ROOT)/lib/gpi_impl/gpi_vhpi.c | $(LIB_DIR)
-	make -C $(SIM_ROOT)/lib/gpi_impl EXTRA_LIBS=$(EXTRA_LIBS) EXTRA_LIBDIRS=$(EXTRA_LIBDIRS)
+	make -C $(SIM_ROOT)/lib/gpi_impl EXTRA_LIBS=$(EXTRA_LIBS) EXTRA_LIBDIRS=$(EXTRA_LIBDIRS) EXTRA_GCC_ARGS=$(EXTRA_GCC_ARGS)
 
-$(LIB_DIR)/libsim.so: $(SIM_ROOT)/lib/simulator/simulatormodule.c | $(LIB_DIR)
+$(LIB_DIR)/libcocotb.$(SO_EXT): $(SIM_ROOT)/lib/embed/gpi_embed.c | $(LIB_DIR)
+	make -C $(SIM_ROOT)/lib/embed EXTRA_LIBS=$(EXTRA_LIBS) EXTRA_LIBDIRS=$(EXTRA_LIBDIRS) EXTRA_GCC_ARGS=$(EXTRA_GCC_ARGS)
+
+$(LIB_DIR)/libsim.$(SO_EXT): $(SIM_ROOT)/lib/simulator/simulatormodule.c | $(LIB_DIR)
 	make -C $(SIM_ROOT)/lib/simulator
 
-COCOTB_LIBS = $(LIB_DIR)/libgpilog.so \
-	      $(LIB_DIR)/libcocotb.so \
-	      $(LIB_DIR)/libgpi.so \
-	      $(LIB_DIR)/libsim.so
+$(LIB_DIR)/libgpilog.a: $(SIM_ROOT)/lib/gpi_log/gpilog.def | $(LIB_DIR)
+	make -C $(SIM_ROOT)/lib/gpi_log export
+
+$(LIB_DIR)/libgpi.a: $(SIM_ROOT)/lib/gpi_impl/gpi.def | $(LIB_DIR)
+	make -C $(SIM_ROOT)/lib/gpi_impl export
+
+$(LIB_DIR)/libcocotb.a: $(SIM_ROOT)/lib/embed/cocotb.def | $(LIB_DIR)
+	make -C $(SIM_ROOT)/lib/embed export
+
+COCOTB_LIBS = $(LIB_DIR)/libgpilog.$(SO_EXT) \
+	      $(LIB_DIR)/libcocotb.a \
+	      $(LIB_DIR)/libgpi.$(SO_EXT) \
+	      $(LIB_DIR)/libcocotb.$(SO_EXT) \
+	      $(LIB_DIR)/libsim.$(SO_EXT)
 
 clean::
 	-@rm -rf $(BUILD_DIR)

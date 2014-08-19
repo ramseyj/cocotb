@@ -37,7 +37,13 @@ ARCH?=$(NATIVE_ARCH)
 # We might work with other Python versions
 PYTHON_VERSION?=$(shell python -c 'import distutils.sysconfig; print distutils.sysconfig.get_python_version()')
 PYTHON_LIBDIR:=$(shell python -c 'from distutils import sysconfig; print sysconfig.get_config_var("LIBDIR")')
+ifeq (None, $(PYTHON_LIBDIR))
+PYTHON_LIBDIR:="c:\python27\libs"
+endif
 PYTHON_DYNLIBDIR:=$(shell python -c 'from distutils import sysconfig; print sysconfig.get_config_var("DESTSHARED")')
+ifeq (None, $(PYTHON_DYNLIBDIR))
+PYTHON_DYNLIBDIR:=/cygdrive/c/python27/DLLs
+endif
 
 # Nasty hack but there's no way in Python properly get the directories for 32-bit Python on a 64-bit system
 # TODO: Under OSX we can use "export VERSIONER_PYTHON_PREFER_32_BIT=yes", no Linux equivalent though
@@ -54,7 +60,10 @@ PYLIBS = $(wildcard $(PYTHON_DYNLIBDIR)/*.so) $(shell python-config --libs)
 else
 PYLIBS = $(shell python-config --libs)
 endif
+PYLIBS=-lpython27
 
-PYTHON_INCLUDEDIR := -I$(shell python -c 'import distutils.sysconfig; print distutils.sysconfig.get_python_inc()')
+PYTHON_INCLUDEDIR := -I"$(shell python -c 'import distutils.sysconfig; print distutils.sysconfig.get_python_inc()')"
+
+PYTHON_SITE_PACKAGES := $(shell cygpath -u `python -c 'import distutils.sysconfig; print distutils.sysconfig.get_python_lib()'`)
 
 

@@ -30,10 +30,10 @@
 include $(SIM_ROOT)/makefiles/Makefile.inc
 
 INCLUDES    +=
-GCC_ARGS    += -DVPI_CHECKING
+GCC_ARGS    += -DVPI_CHECKING $(EXTRA_GCC_ARGS)
 LIBS        := -lgpilog -lcocotb $(EXTRA_LIBS)
-LD_PATH     := -L$(LIB_DIR) $(EXTRA_LIBDIRS)
-LIB_NAME    := libgpi.so
+LD_PATH     := $(LIB_DIR) $(EXTRA_LIBDIRS)
+LIB_NAME    := gpi
 
 SRCS        := gpi_common.c gpi_vpi.c gpi_vhpi.c
 
@@ -43,12 +43,14 @@ CLIBS       += $(LIB_DIR)/gpivpi.vpl
 # different simulators, icarus for instance loads a <name>.vpi libraray to use the vpi
 # inerface at the start of the simulation
 
-all: $(LIB_DIR)/gpivpi.vpl $(LIB_DIR)/cocotb.vpi
+all: $(LIB_DIR)/gpivpi.vpl $(LIB_DIR)/cocotb.vpi export
 
-$(LIB_DIR)/gpivpi.vpl: $(LIB_DIR)/$(LIB_NAME)
+export: $(LIB_DIR)/lib$(LIB_NAME).a
+
+$(LIB_DIR)/gpivpi.vpl: $(LIB_DIR)/$(LIB_NAME).$(SO_EXT)
 	ln -sf $(LIB_NAME) $@
 
-$(LIB_DIR)/cocotb.vpi: $(LIB_DIR)/$(LIB_NAME)
+$(LIB_DIR)/cocotb.vpi: $(LIB_DIR)/$(LIB_NAME).$(SO_EXT)
 	ln -sf $(LIB_NAME) $@
 
 clean:

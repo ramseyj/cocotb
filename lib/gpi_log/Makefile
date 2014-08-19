@@ -34,9 +34,11 @@ GCC_ARGS    += -DFILTER
 LIBS        := $(PYLIBS)
 SRCS        := gpi_logging.c
 
-LIB_NAME    := libgpilog.so
+LIB_NAME    := gpilog
 
-all: $(LIB_DIR)/$(LIB_NAME)
+all: $(LIB_DIR)/$(LIB_NAME).$(SO_EXT) export
+
+export: $(LIB_DIR)/lib$(LIB_NAME).a
 
 clean:
 	-@rm -rf $(LIB_DIR)/$(LIB_NAME)
