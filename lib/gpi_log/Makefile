@@ -38,8 +38,6 @@ LIB_NAME    := libgpilog
 
 all: $(LIB_DIR)/$(LIB_NAME).$(SO_EXT)
 
-export: $(LIB_DIR)/$(LIB_NAME).a
-
 clean:
 	-@rm -rf $(LIB_DIR)/$(LIB_NAME)
 

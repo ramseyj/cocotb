@@ -61,13 +61,13 @@ $(LIB_DIR)/libsim.$(SO_EXT): $(SIM_ROOT)/lib/simulator/simulatormodule.c | $(LIB
 	make -C $(SIM_ROOT)/lib/simulator
 
 $(LIB_DIR)/libgpilog.a: $(SIM_ROOT)/lib/gpi_log/gpilog.def | $(LIB_DIR)
-	make -C $(SIM_ROOT)/lib/gpi_log $(LIB_DIR)/libgpilog.a
+	make -C $(SIM_ROOT)/lib/gpi_log export
 
 $(LIB_DIR)/libgpi.a: $(SIM_ROOT)/lib/gpi_impl/gpi.def | $(LIB_DIR)
-	make -C $(SIM_ROOT)/lib/gpi_impl $(LIB_DIR)/libgpi.a
+	make -C $(SIM_ROOT)/lib/gpi_impl export
 
 $(LIB_DIR)/libcocotb.a: $(SIM_ROOT)/lib/embed/cocotb.def | $(LIB_DIR)
-	make -C $(SIM_ROOT)/lib/embed $(LIB_DIR)/libcocotb.a
+	make -C $(SIM_ROOT)/lib/embed export
 
 ifeq ($(OS), CYGWIN)
 COCOTB_LIBS = $(LIB_DIR)/libcocotb.a \

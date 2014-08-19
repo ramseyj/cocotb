@@ -34,11 +34,12 @@
 
 # Define some of our own
 $(LIB_NAME)_OBJS:= $(SRCS:%.c=$(LIB_OBJ_DIR)/%.o)
+export: $(LIB_DIR)/$(LIB_NAME).a
 
 $(LIB_OBJ_DIR)/%.o: %.c
 	gcc $(GCC_ARGS) -c $(INCLUDES) -o "$(call cygpath,$@)" $<
 
-$(LIB_DIR)/lib$(LIB_NAME).a: $(LIB_NAME).def
+$(LIB_DIR)/$(LIB_NAME).a: $(subst lib,,$(LIB_NAME).def)
 	dlltool -d "$(call cygpath,$<)" -l "$(call cygpath,$@)"
 
 $(LIB_DIR)/$(LIB_NAME).$(SO_EXT): $($(LIB_NAME)_OBJS)

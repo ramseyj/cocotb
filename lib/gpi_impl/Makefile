@@ -36,7 +36,6 @@ LD_PATH     := $(LIB_DIR) $(EXTRA_LIBDIRS)
 LIB_NAME    := libgpi
 
 SRCS        := gpi_common.c gpi_vpi.c gpi_vhpi.c
-DEF_FILE    := gpi.def
 
 CLIBS       += $(LIB_DIR)/gpivpi.vpl
 

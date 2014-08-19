@@ -59,7 +59,7 @@ endif
 # is we simply link against all dynamic libraries in the Python installation
 ifeq ($(OS),Linux)
 PYLIBS = $(wildcard $(PYTHON_DYNLIBDIR)/*.so) $(shell python-config --libs)
-else ifeq ($OS),CYGWIN)
+else ifeq ($(OS),CYGWIN)
 PYLIBS=-lpython$(subst .,,$(PYTHON_VERSION))
 else
 PYLIBS = $(shell python-config --libs)
