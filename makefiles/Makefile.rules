@@ -27,8 +27,33 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ##############################################################################
 
+# Disable some inbuild rules
+%: %.c
+%: %.o
+
+# Define some of our own
+$(LIB_NAME)_OBJS:= $(SRCS:%.c=$(LIB_OBJ_DIR)/%.o)
+
 ifeq ($(OS), CYGWIN)
-include $(SIM_ROOT)/makefiles/Makefile.rules.win32
+
+export: $(LIB_DIR)/$(LIB_NAME).a
+
+$(LIB_OBJ_DIR)/%.o: %.c
+	gcc $(GCC_ARGS) -c $(INCLUDES) -o "$(call cygpath,$@)" $<
+
+$(LIB_DIR)/$(LIB_NAME).a: $(subst lib,,$(LIB_NAME).def)
+	dlltool -d "$(call cygpath,$<)" -l "$(call cygpath,$@)"
+
+$(LIB_DIR)/$(LIB_NAME).$(SO_EXT): $($(LIB_NAME)_OBJS)
+	gcc $(GCC_ARGS) $(LINKER_ARGS) -o "$(call cygpath,$@)" $(foreach lib,$($(LIB_NAME)_OBJS),"$(call cygpath,$(lib))") $(LIBS) $(foreach path,$(LD_PATH),-L"$(call cygpath,$(path))")
+
 else
-include $(SIM_ROOT)/makefiles/Makefile.rules.linux
+
+# Linux and Mac
+$(LIB_OBJ_DIR)/%.o: %.c
+	gcc $(GCC_ARGS) -c -fpic $(INCLUDES) -o $@ $<
+
+$(LIB_DIR)/$(LIB_NAME).so: $($(LIB_NAME)_OBJS)
+	gcc $(GCC_ARGS) $(LINKER_ARGS) -o $@ $($(LIB_NAME)_OBJS) $(LIBS) $(foreach path,$(LD_PATH),-L$(path))
+
 endif

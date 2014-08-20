@@ -1,4 +1,4 @@
-LIBRARY gpilog.dll
+LIBRARY libgpilog.dll
 EXPORTS
 gpi_log
 set_log_handler

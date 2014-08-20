@@ -1,4 +1,4 @@
-LIBRARY gpi.dll
+LIBRARY libgpi.dll
 EXPORTS
 gpi_sim_end
 gpi_register_readonly_callback
