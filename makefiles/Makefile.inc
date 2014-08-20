@@ -70,8 +70,8 @@ ifeq ($(OS),Darwin)
 GCC_ARGS    :=  -g -DDEBUG -fpic
 else
 GCC_ARGS	:=	-Werror -Wcast-qual -Wcast-align -Wwrite-strings \
-				-Waggregate-return -Wstrict-prototypes           \
-				-Wno-unused-parameter -fno-common -g -DDEBUG
+				-Waggregate-return -Wstrict-prototypes -Wall           \
+				-Wno-unused-parameter -fno-common -g -DDEBUG -fpic
 ifeq ($(ARCH),i686)
 GCC_ARGS    += -m32
 endif
