@@ -55,7 +55,7 @@ lib_install:
 	@echo "Installing python simulator library to $(PYTHON_DYNLIBDIR)"
 	@cp $(LIB_DIR)/libsim.dll $(PYTHON_DYNLIBDIR)/simulator.pyd
 	@echo "Installing cocotb libraries to $(INSTALL_DIR)/lib"
-	@cp $(LIB_DIR)/cocotb.dll $(LIB_DIR)/gpi.dll $(LIB_DIR)/gpilog.dll $(INSTALL_DIR)/lib
+	@cp $(LIB_DIR)/libcocotb.dll $(LIB_DIR)/libgpi.dll $(LIB_DIR)/libgpilog.dll $(INSTALL_DIR)/lib
 
 src_install:
 	@mkdir -p $(FULL_INSTALL_DIR)/lib

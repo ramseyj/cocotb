@@ -44,7 +44,7 @@ PYTHON_LIBDIR:="$(PYTHON_DIR)\libs"
 endif
 PYTHON_DYNLIBDIR:=$(shell python -c 'from distutils import sysconfig; print sysconfig.get_config_var("DESTSHARED")')
 ifeq (None, $(PYTHON_DYNLIBDIR))
-PYTHON_DYNLIBDIR:=$(shell cygpath -u $(PYTHON_DIR))/DLLs
+PYTHON_DYNLIBDIR:=$(shell cygpath -u "$(PYTHON_DIR)")/DLLs
 endif
 
 # Nasty hack but there's no way in Python properly get the directories for 32-bit Python on a 64-bit system
@@ -70,5 +70,5 @@ PYTHON_INCLUDEDIR := -I"$(shell python -c 'import distutils.sysconfig; print dis
 PYTHON_SITE_PACKAGES := $(shell python -c 'import distutils.sysconfig; print distutils.sysconfig.get_python_lib()')
 
 ifeq ($(OS), CYGWIN)
-PYTHON_SITE_PACKAGES := $(shell cygpath -u $(PYTHON_SITE_PACKAGES))
+PYTHON_SITE_PACKAGES := $(shell cygpath -u "$(PYTHON_SITE_PACKAGES)")
 endif
