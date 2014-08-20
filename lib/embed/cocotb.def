@@ -1,4 +1,4 @@
-LIBRARY cocotb.dll
+LIBRARY libcocotb.dll
 EXPORTS
 embed_sim_init
 embed_init_python

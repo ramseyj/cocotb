@@ -50,7 +50,7 @@ ifeq ($(GPI_IMPL),vpi)
     GPI_ARGS = -pli libgpi
 endif
 ifeq ($(GPI_IMPL),vhpi)
-    GPI_ARGS = -loadvhpi \"$(call cygpath,$(LIB_DIR)/gpi):vhpi_startup_routines_bootstrap\"
+    GPI_ARGS = -loadvhpi \"$(call cygpath,$(LIB_DIR)/libgpi):vhpi_startup_routines_bootstrap\"
 endif
 
 ifndef GPI_ARGS

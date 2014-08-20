@@ -56,5 +56,5 @@ begin
 
     stream_out_data_comb <= stream_in_data;
 
-    stream_in_read <= stream_out_ready;
+    stream_in_ready <= stream_out_ready;
 end arch;
