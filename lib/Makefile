@@ -36,26 +36,32 @@ ifndef GPI_IMPL
    $(error "Unable to determine appropriate GPI layer to use")
 endif
 
+$(LIB_OBJ_DIR):
+	mkdir -p $@
+
+$(LIB_DIR): $(LIB_OBJ_DIR)
+	mkdir -p $@
+
 cocotb-export:
-	@cd $(SIM_ROOT)/lib/embed; make -f Makefile export
+	make -C $(SIM_ROOT)/lib/embed export
 
 gpi-export:
-	@cd $(SIM_ROOT)/lib/gpi_impl; make -f Makefile export
+	make -C $(SIM_ROOT)/lib/gpi_impl export
 
 gpilog-export:
-	@cd $(SIM_ROOT)/lib/gpi_log; make -f Makefile export
+	make -C $(SIM_ROOT)/lib/gpi_log export
 
 cocotb:
-	@cd $(SIM_ROOT)/lib/embed; make -f Makefile EXTRA_LIBS=$(EXTRA_LIBS) EXTRA_LIBDIRS=$(EXTRA_LIBDIRS) EXTRA_GCC_ARGS=$(EXTRA_GCC_ARGS)
+	make -C $(SIM_ROOT)/lib/embed EXTRA_LIBS=$(EXTRA_LIBS) EXTRA_LIBDIRS=$(EXTRA_LIBDIRS) EXTRA_GCC_ARGS=$(EXTRA_GCC_ARGS)
 
 gpi:
-	@cd $(SIM_ROOT)/lib/gpi_impl; make -f Makefile EXTRA_LIBS=$(EXTRA_LIBS) EXTRA_LIBDIRS=$(EXTRA_LIBDIRS) EXTRA_GCC_ARGS=$(EXTRA_GCC_ARGS)
+	make -C $(SIM_ROOT)/lib/gpi_impl EXTRA_LIBS=$(EXTRA_LIBS) EXTRA_LIBDIRS=$(EXTRA_LIBDIRS) EXTRA_GCC_ARGS=$(EXTRA_GCC_ARGS)
 
 gpilog:
-	@cd $(SIM_ROOT)/lib/gpi_log; make -f Makefile
+	make -C $(SIM_ROOT)/lib/gpi_log
 
 simulator:
-	@cd $(SIM_ROOT)/lib/simulator; make -f Makefile
+	make -C $(SIM_ROOT)/lib/simulator
 
 COCOTB_LIBS = $(LIB_DIR)
 ifeq ($(OS), CYGWIN)
