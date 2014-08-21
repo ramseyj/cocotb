@@ -68,7 +68,6 @@ endif
 ifdef VERILOG_SOURCES
 	echo "alog $(ALOG_ARGS) $(call cygpath,$(VERILOG_SOURCES))" >> $@
 endif
-	@echo "GPI_ARGS is $(GPI_ARGS)"
 ifdef SCRIPT_FILE
 	echo "do $(SCRIPT_FILE)" >> $@
 endif

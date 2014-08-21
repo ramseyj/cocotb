@@ -49,14 +49,18 @@ ifeq ($(findstring CYGWIN, $(OS)), CYGWIN)
 endif
 export OS
 
+ifeq ($(OS), CYGWIN)
+# Define function for converting paths to Windows format
+cygpath = $(shell cygpath -p -w "$(1)")
+endif
+
 include $(SIM_ROOT)/makefiles/Makefile.paths
 include $(SIM_ROOT)/makefiles/Makefile.pylib
 
 export LIB_DIR=$(BUILD_DIR)/libs/$(ARCH)
 export LIB_OBJ_DIR:= $(BUILD_DIR)/obj/$(ARCH)
 ifeq ($(OS), CYGWIN)
-SIM_ROOT_DOS := $(shell cygpath -d "$(SIM_ROOT)")
-INCLUDES := -I"$(SIM_ROOT_DOS)\include"
+INCLUDES := -I"$(call cygpath,$(SIM_ROOT))\include"
 else
 INCLUDES := -I$(SIM_ROOT)/include
 endif
@@ -93,7 +97,3 @@ else
 export SO_EXT=so
 endif
 
-ifeq ($(OS), CYGWIN)
-# Define function for converting paths to Windows format
-cygpath = $(shell cygpath -p -w "$(1)")
-endif

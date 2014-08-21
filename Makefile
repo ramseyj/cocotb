@@ -47,15 +47,7 @@ test:
 	./bin/combine_results.py
 
 pycode:
-#	@cp -R $(SIM_ROOT)/cocotb $(FULL_INSTALL_DIR)/
-	@echo "Installing python packages to $(PYTHON_SITE_PACKAGES)"
-	@cp -R $(SIM_ROOT)/cocotb $(PYTHON_SITE_PACKAGES)
-
-lib_install:
-	@echo "Installing python simulator library to $(PYTHON_DYNLIBDIR)"
-	@cp $(LIB_DIR)/libsim.dll $(PYTHON_DYNLIBDIR)/simulator.pyd
-	@echo "Installing cocotb libraries to $(INSTALL_DIR)/lib"
-	@cp $(LIB_DIR)/libcocotb.dll $(LIB_DIR)/libgpi.dll $(LIB_DIR)/libgpilog.dll $(INSTALL_DIR)/lib
+	@cp -R $(SIM_ROOT)/cocotb $(FULL_INSTALL_DIR)/
 
 src_install:
 	@mkdir -p $(FULL_INSTALL_DIR)/lib
@@ -71,16 +63,23 @@ common_install:
 create_files:
 	bin/create_files.py $(FULL_INSTALL_DIR)
 
-install: pycode lib_install
+win-install: pycode lib_install
+	@echo "Installing python packages to $(PYTHON_SITE_PACKAGES)"
+	@cp -R $(SIM_ROOT)/cocotb $(PYTHON_SITE_PACKAGES)
+	@echo "Installing python simulator library to $(PYTHON_DYNLIBDIR)"
+	@cp $(LIB_DIR)/libsim.dll $(PYTHON_DYNLIBDIR)/simulator.pyd
+	@echo "Installing cocotb libraries to $(INSTALL_DIR)/lib"
+	@cp $(LIB_DIR)/libcocotb.dll $(LIB_DIR)/libgpi.dll $(LIB_DIR)/libgpilog.dll $(INSTALL_DIR)/lib
 
-full_install: src_install common_install pycode create_files
+install: src_install common_install pycode create_files
 	@echo -e "\nInstalled to $(FULL_INSTALL_DIR)"
 	@echo -e "To uninstall run $(FULL_INSTALL_DIR)/bin/cocotb_uninstall\n"
 
 help:
-	@echo -e "\nCoCoTB make help\n\nall\t- Build libaries for native"
-	@echo -e "install\t- Build and install libaries to FULL_INSTALL_DIR (default=$(FULL_INSTALL_DIR))"
-	@echo -e "clean\t- Clean the build dir\n\n"
+	@echo -e "\nCoCoTB make help\n\nall\t\t- Build libaries for native"
+	@echo -e "install\t\t- Build and install libaries to FULL_INSTALL_DIR (default=$(FULL_INSTALL_DIR))"
+	@echo -e "win-install\t- Build and install for Windows environment"
+	@echo -e "clean\t\t- Clean the build dir\n\n"
 	@echo -e "To build natively just run make.\nTo build for 32bit on a 64 bit system set ARCH=i686\n"
 	@echo -e "Default simulator is Icarus. To use another set environment variable SIM as below\n"
 	@for X in $(shell ls makefiles/simulators/); do \

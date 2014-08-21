@@ -31,7 +31,6 @@ include $(SIM_ROOT)/makefiles/Makefile.inc
 
 INCLUDES	+=
 GCC_ARGS	+= -D__int64="long long int" $(EXTRA_GCC_ARGS)
-# LIBS		:= $(PYLIBS) $(LIB_DIR)/gpilog.a $(LIB_DIR)/gpi.a
 LIBS		:= $(PYLIBS) -lgpilog -lgpi
 LD_PATH		:= $(LIB_DIR)
 SRCS		:= gpi_embed.c
@@ -39,8 +38,6 @@ SRCS		:= gpi_embed.c
 LIB_NAME	:= libcocotb
 
 all: $(LIB_DIR)/$(LIB_NAME).$(SO_EXT)
-
-export: $(LIB_DIR)/$(LIB_NAME).a
 
 clean:
 	-@rm -rf $(OBJ_DIR)
