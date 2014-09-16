@@ -8,7 +8,7 @@ import codecs
 
 VERSION = '0.4.1-rtl'
 
-DEBUG = True
+DEBUG = False
 
 INSTALL = 1
 PACKAGE = 2
@@ -33,18 +33,18 @@ def installFiles():
 
 def packageFiles():
     # Run 7-zip to create the archive
-    cmdstr = "c:\\Program Files\\7-Zip\\7z.exe a dist\\cocotb-" + VERSION + ".7z cocotb-" + VERSION
+    cmdstr = "/cygdrive/c/Program\ Files/7-Zip/7z.exe a dist/cocotb-" + VERSION + ".7z cocotb-" + VERSION
     print("Executing: " + cmdstr)
     try:
-        cmd = Popen(cmdstr)
+        cmd = Popen(cmdstr, shell=True)
+        rtn = cmd.wait()
+        if rtn != 0:
+            print("Command failed.")
     except OSError as ex:
         print("Command failed: " + ex.strerror)
-    rtn = cmd.wait()
-    if rtn != 0:
-        print("Command failed.")
     
     # Create config.txt file
-    cfg = codecs.open("dist\\config.txt", 'w', 'utf_8_sig')
+    cfg = codecs.open("dist/config.txt", 'w', 'utf_8_sig')
     cfgstr = ';!@Install@!UTF-8!\n'\
              'Title=\"Cocotb\"\n'\
              'BeginPrompt=\"Do you want to install?\"\n'\
@@ -54,20 +54,20 @@ def packageFiles():
     cfg.close()
 
     # create self extracting zip
-    cmdstr = "copy /b /y 7zS.sfx + config.txt + cocotb-" + VERSION + ".7z cocotb-setup-"+ VERSION + ".exe"
+    cmdstr = "cat 7zS.sfx config.txt cocotb-" + VERSION + ".7z > cocotb-setup-"+ VERSION + ".exe"
     print("Executing: " + cmdstr)
     try:
         cmd = Popen(cmdstr, cwd=".\\dist", shell=True)
+        rtn = cmd.wait()
+        if rtn != 0:
+            print("Command failed.")
     except OSError as ex:
         print("Command failed: " + ex.strerror)
-    rtn = cmd.wait()
-    if rtn != 0:
-        print("Command failed.")
 
 def createBatFile():
     # Create the bat file
     bat = file("setup.bat", "w")
-    if DEBUG is not None:
+    if DEBUG is not None and DEBUG:
         bat.write("cd cocotb-"+VERSION+"\n"\
                   "setup.py -i\n"\
                   "PAUSE\n")
@@ -79,9 +79,9 @@ def createBatFile():
 def cleanUp():
     print("Removing temporary files.")
     rmtree("cocotb-"+VERSION)
-    remove("dist\\cocotb-"+VERSION+".7z")
-    remove("dist\\cocotb-"+VERSION+".zip")
-    remove("dist\\config.txt")
+    remove("dist/cocotb-"+VERSION+".7z")
+    remove("dist/cocotb-"+VERSION+".tar.gz")
+    remove("dist/config.txt")
     remove("setup.bat")
 
 def runDistutils(args):
