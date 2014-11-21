@@ -49,12 +49,17 @@ endif
 # Since we don't know which modules we might need or whether the simulator
 # we're using passes the RTLD_GLOBAL to dlopen or whether the OS supports
 # is we simply link against all dynamic libraries in the Python installation
-ifeq ($(OS),Linux)
-PYLIBS = $(wildcard $(PYTHON_DYNLIBDIR)/*.so) $(shell python-config --libs)
-else
 PYLIBS = $(shell python-config --libs)
-endif
 
 PYTHON_INCLUDEDIR := -I$(shell python -c 'import distutils.sysconfig; print distutils.sysconfig.get_python_inc()')
 
+#debug::
+#	@echo "Debug from Makefile.pylib"
+#	@echo -e "\tUsing PYTHON_VERSION=$(PYTHON_VERSION)"
+#	@echo -e "\tUsing PYTHON_LIBDIR=$(PYTHON_LIBDIR)"
+#	@echo -e "\tUsing PYTHON_SO_LIB=libpython$(PYTHON_VERSION).so"
+#	@echo -e "\tUsing PYTHON_DYNLIBDIR=$(PYTHON_DYNLIBDIR)"
+#	@echo -e "\tUsing PYTHON_INCLUDEDIR=$(PYTHON_INCLUDEDIR)"
+#	file $(PYTHON_LIBDIR)/libpython$(PYTHON_VERSION).so
+#	file -L $(PYTHON_LIBDIR)/libpython$(PYTHON_VERSION).so
 

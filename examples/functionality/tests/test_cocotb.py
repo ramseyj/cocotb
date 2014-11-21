@@ -36,7 +36,7 @@ Also used a regression test of cocotb capabilities
 import cocotb
 from cocotb.triggers import Timer, Join, RisingEdge, ReadOnly, ReadWrite
 from cocotb.clock import Clock
-from cocotb.result import ReturnValue
+from cocotb.result import ReturnValue, TestFailure
 
 
 
@@ -162,14 +162,14 @@ def do_test_readwrite_in_readonly(dut):
     exited = True
 
 @cocotb.coroutine
-def do_test_afterdelay_in_readonly(dut):
+def do_test_afterdelay_in_readonly(dut, delay):
     global exited
     yield RisingEdge(dut.clk)
     yield ReadOnly()
-    yield Timer(0)
+    yield Timer(delay)
     exited = True
 
-@cocotb.test()
+@cocotb.test(expect_error=True)
 def test_readwrite_in_readonly(dut):
     """Test doing invalid sim operation"""
     global exited
@@ -181,13 +181,25 @@ def test_readwrite_in_readonly(dut):
     if exited is not True:
         raise cocotb.TestFailed
 
-@cocotb.test()
+@cocotb.test(expect_error=cocotb.SIM_NAME in ["Icarus Verilog"])
 def test_afterdelay_in_readonly(dut):
     """Test doing invalid sim operation"""
     global exited
     exited = False
     clk_gen = cocotb.fork(Clock(dut.clk, 100).start())
-    coro = cocotb.fork(do_test_afterdelay_in_readonly(dut))
+    coro = cocotb.fork(do_test_afterdelay_in_readonly(dut, 0))
+    yield [Join(coro), Timer(100000)]
+    clk_gen.kill()
+    if exited is not True:
+        raise cocotb.TestFailed
+
+@cocotb.test()
+def test_afterdelay_in_readonly_valid(dut):
+    """Same as test_afterdelay_in_readonly but with valid delay > 0"""
+    global exited
+    exited = False
+    clk_gen = cocotb.fork(Clock(dut.clk, 100).start())
+    coro = cocotb.fork(do_test_afterdelay_in_readonly(dut, 1))
     yield [Join(coro), Timer(100000)]
     clk_gen.kill()
     if exited is not True:
@@ -244,4 +256,44 @@ def test_fork_syntax_error(dut):
     yield clock_gen(dut.clk)
     cocotb.fork(syntax_error())
     yield clock_gen(dut.clk)
+
+
+
+@cocotb.coroutine
+def count_edges_cycles(signal, edges):
+    edge = RisingEdge(signal)
+    for i in xrange(edges):
+        yield edge
+        signal.log.info("Rising edge %d detected" % i)
+    signal.log.info("Finished, returning %d" % edges)
+    raise ReturnValue(edges)
+
+@cocotb.test()
+def test_fork_and_monitor(dut, period=1000, clocks=6):
+    cocotb.fork(Clock(dut.clk, period).start())
+
+    # Ensure the clock has started
+    yield RisingEdge(dut.clk)
+
+    timer = Timer(period + 10)
+    task = cocotb.fork(count_edges_cycles(dut.clk, clocks))
+    count = 0
+    expect = clocks-1
+
+
+    while True:
+        result = yield [timer, task.join()]
+        if count > expect:
+            raise TestFailure("Task didn't complete in expected time")
+        if result is timer:
+            dut.log.info("Count %d: Task still running" % count)
+            count += 1
+        else:
+            break
+    if count != expect:
+        raise TestFailure("Expected to monitor the task %d times but got %d" % (
+                                                             expect, count))
+    if result != clocks:
+        raise TestFailure("Expected task to return %d but got %s" % (clocks, repr(result)))
+
 
