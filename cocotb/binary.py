@@ -27,7 +27,9 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. '''
 
+from __future__ import print_function
 from math import log,ceil
+from cocotb.utils import get_python_integer_types
 
 def resolve(string):
     for char in BinaryValue._resolve_to_0:
@@ -103,7 +105,7 @@ class BinaryValue(object):
         if the string contains any characters that aren't 0, 1, X or Z
         then we interpret the string as a binary buffer...
         """
-        if isinstance(value, (int, long)):
+        if isinstance(value, get_python_integer_types()):
             self.value = value
         elif isinstance(value, str):
             try:
@@ -180,7 +182,7 @@ class BinaryValue(object):
             else:
                 rv = '0' * (self._bits-l) + x
         elif l > self._bits:
-            print "WARNING truncating value to match requested number of bits (%d -> %d)" % (l,self._bits)
+            print("WARNING truncating value to match requested number of bits (%d -> %d)" % (l,self._bits))
             if self.big_endian:
                 rv = x[l - self._bits:]
             else:
@@ -200,7 +202,7 @@ class BinaryValue(object):
                 rv = '0' * (self._bits-1-l) + x[1:]
                 rv = x[0] + rv
         elif l > self._bits:
-            print "WARNING truncating value to match requested number of bits (%d -> %d)" % (l,self._bits)
+            print("WARNING truncating value to match requested number of bits (%d -> %d)" % (l,self._bits))
             if self.big_endian:
                 rv = x[l - self._bits:]
             else:
@@ -219,7 +221,7 @@ class BinaryValue(object):
             else:
                 rv = x[0] * (self._bits-l) + x
         elif l > self._bits:
-            print "WARNING truncating value to match requested number of bits (%d -> %d)" % (l,self._bits)
+            print("WARNING truncating value to match requested number of bits (%d -> %d)" % (l,self._bits))
             if self.big_endian:
                 rv = x[l - self._bits:]
             else:
@@ -240,7 +242,7 @@ class BinaryValue(object):
         if (ival & signbit) == 0:
             return ival
         else:
-            return -1 * (int(~ival+1) & (signbit - 1)) 
+            return -1 * (1+(int(~ival) & (signbit - 1)))
 
     def set_value(self, integer):
         self._str = self._convert_to[self.binaryRepresentation](integer)
@@ -294,7 +296,7 @@ class BinaryValue(object):
             else:
                 self._str = "0" * (self._bits-l) + self._str
         elif l > self._bits:
-            print "WARNING truncating value to match requested number of bits (%d)" % l
+            print("WARNING truncating value to match requested number of bits (%d)" % l)
             self._str = self._str[l - self._bits:]
 
     buff = property(get_buff, set_buff, None, "Access to the value as a buffer")
@@ -323,6 +325,9 @@ class BinaryValue(object):
 
     def __str__(self):
         return "%d" % (self.value)
+
+    def __bool__(self):
+        return self.__nonzero__()
 
     def __nonzero__(self):
         """Provide boolean testing of a binstr.

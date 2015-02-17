@@ -34,9 +34,9 @@ Also used a regression test of cocotb capabilities
 """
 
 import cocotb
-from cocotb.triggers import Timer, Join, RisingEdge, ReadOnly, ReadWrite
+from cocotb.triggers import Timer, Join, RisingEdge, FallingEdge, Edge, ReadOnly, ReadWrite
 from cocotb.clock import Clock
-from cocotb.result import ReturnValue, TestFailure
+from cocotb.result import ReturnValue, TestFailure, TestError
 
 
 
@@ -126,10 +126,10 @@ def test_coroutine_kill(dut):
     yield Timer(100)
     clk_gen.kill()
     if test_flag is not False:
-        raise cocotb.TestFailed
+        raise TestFailure
     yield Timer(1000)
     if test_flag is not True:
-        raise cocotb.TestFailed
+        raise TestFailure
 
 @cocotb.test(expect_error=True)
 def test_adding_a_coroutine_without_starting(dut):
@@ -169,7 +169,7 @@ def do_test_afterdelay_in_readonly(dut, delay):
     yield Timer(delay)
     exited = True
 
-@cocotb.test(expect_error=True)
+@cocotb.test(expect_error=True, expect_fail=cocotb.SIM_NAME in ["Icarus Verilog", "Riviera-PRO", "ModelSim DE", "ModelSim ALTERA STARTER EDITION"])
 def test_readwrite_in_readonly(dut):
     """Test doing invalid sim operation"""
     global exited
@@ -179,19 +179,19 @@ def test_readwrite_in_readonly(dut):
     yield [Join(coro), Timer(10000)]
     clk_gen.kill()
     if exited is not True:
-        raise cocotb.TestFailed
+        raise TestFailure
 
-@cocotb.test(expect_error=cocotb.SIM_NAME in ["Icarus Verilog"])
+@cocotb.test(expect_fail=cocotb.SIM_NAME in ["Icarus Verilog", "Chronologic Simulation VCS Release "])
 def test_afterdelay_in_readonly(dut):
     """Test doing invalid sim operation"""
     global exited
     exited = False
     clk_gen = cocotb.fork(Clock(dut.clk, 100).start())
     coro = cocotb.fork(do_test_afterdelay_in_readonly(dut, 0))
-    yield [Join(coro), Timer(100000)]
+    yield [Join(coro), Timer(1000)]
     clk_gen.kill()
     if exited is not True:
-        raise cocotb.TestFailed
+        raise TestFailure
 
 @cocotb.test()
 def test_afterdelay_in_readonly_valid(dut):
@@ -203,7 +203,7 @@ def test_afterdelay_in_readonly_valid(dut):
     yield [Join(coro), Timer(100000)]
     clk_gen.kill()
     if exited is not True:
-        raise cocotb.TestFailed
+        raise TestFailure
 
 @cocotb.coroutine
 def clock_one(dut):
@@ -257,17 +257,6 @@ def test_fork_syntax_error(dut):
     cocotb.fork(syntax_error())
     yield clock_gen(dut.clk)
 
-
-
-@cocotb.coroutine
-def count_edges_cycles(signal, edges):
-    edge = RisingEdge(signal)
-    for i in xrange(edges):
-        yield edge
-        signal.log.info("Rising edge %d detected" % i)
-    signal.log.info("Finished, returning %d" % edges)
-    raise ReturnValue(edges)
-
 @cocotb.test()
 def test_fork_and_monitor(dut, period=1000, clocks=6):
     cocotb.fork(Clock(dut.clk, period).start())
@@ -296,4 +285,124 @@ def test_fork_and_monitor(dut, period=1000, clocks=6):
     if result != clocks:
         raise TestFailure("Expected task to return %d but got %s" % (clocks, repr(result)))
 
+@cocotb.coroutine
+def count_edges_cycles(signal, edges):
+    edge = RisingEdge(signal)
+    for i in range(edges):
+        yield edge
+        signal.log.info("Rising edge %d detected" % i)
+    signal.log.info("Finished, returning %d" % edges)
+    raise ReturnValue(edges)
 
+@cocotb.coroutine
+def do_single_edge_check(dut, level):
+    """Do test for rising edge"""
+    old_value = dut.clk.value.integer
+    dut.log.info("Value of %s is %d" % (dut.clk, old_value))
+    if old_value is level:
+        raise TestError("%s not to %d start with" % (dut.clk, not level))
+    if level == 1:
+        yield RisingEdge(dut.clk)
+    else:
+        yield FallingEdge(dut.clk)
+    new_value = dut.clk.value.integer
+    dut.log.info("Value of %s is %d" % (dut.clk, new_value))
+    if new_value is not level:
+        raise TestError("%s not %d at end" % (dut.clk, level))
+
+@cocotb.test()
+def test_rising_edge(dut):
+    """Test that a rising edge can be yielded on"""
+    dut.clk <= 0
+    yield Timer(1)
+    test = cocotb.fork(do_single_edge_check(dut, 1))
+    yield Timer(10)
+    dut.clk <= 1
+    fail_timer = Timer(1000)
+    result = yield [fail_timer, test.join()]
+    if result is fail_timer:
+        raise TestError("Test timed out")
+
+@cocotb.test()
+def test_falling_edge(dut):
+    """Test that a falling edge can be yielded on"""
+    dut.clk <= 1
+    yield Timer(1)
+    test = cocotb.fork(do_single_edge_check(dut, 0))
+    yield Timer(10)
+    dut.clk <= 0
+    fail_timer = Timer(1000)
+    result = yield [fail_timer, test.join()]
+    if result is fail_timer:
+        raise TestError("Test timed out")
+
+@cocotb.test()
+def test_either_edge(dut):
+    """Test that either edge can be triggered on"""
+    dut.clk <= 0
+    yield Timer(1)
+    dut.clk <= 1
+    yield Edge(dut.clk)
+    if dut.clk.value.integer is not 1:
+        raise TestError("Value should be 0")
+    yield Timer(10)
+    dut.clk <= 0
+    yield Edge(dut.clk)
+    if dut.clk.value.integer is not 0:
+        raise TestError("Value should be 0")
+    yield Timer(10)
+    dut.clk <= 1
+    yield Edge(dut.clk)
+    if dut.clk.value.integer is not 1:
+        raise TestError("Value should be 0")
+    yield Timer(10)
+    dut.clk <= 0
+    yield Edge(dut.clk)
+    if dut.clk.value.integer is not 0:
+        raise TestError("Value should be 0")
+    yield Timer(10)
+    dut.clk <= 1
+    yield Edge(dut.clk)
+    if dut.clk.value.integer is not 1:
+        raise TestError("Value should be 0")
+    yield Timer(10)
+    dut.clk <= 0
+    yield Edge(dut.clk)
+    if dut.clk.value.integer is not 0:
+        raise TestError("Value should be 0")
+
+@cocotb.coroutine
+def do_clock(dut, limit, period):
+    """Simple clock with a limit"""
+    wait_period = period / 2
+    while limit:
+        yield Timer(wait_period)
+        dut.clk <= 0
+        yield Timer(wait_period)
+        dut.clk <= 1
+        limit -= 1
+
+@cocotb.coroutine
+def do_edge_count(dut, signal):
+    """Count the edges"""
+    global edges_seen 
+    count = 0;
+    while True:
+        yield RisingEdge(signal)
+        edges_seen += 1
+
+
+@cocotb.test()
+def test_edge_count(dut):
+    """Count the number of edges is as expected"""
+    global edges_seen
+    edges_seen = 0
+    clk_period = 100;
+    edge_count = 10;
+    clock = cocotb.fork(do_clock(dut, edge_count, clk_period))
+    test = cocotb.fork(do_edge_count(dut, dut.clk))
+
+    yield Timer(clk_period * (edge_count + 1))
+
+    if edge_count is not edges_seen:
+        raise TestFailure("Correct edge count failed saw %d wanted %d" % (edges_seen, edge_count))

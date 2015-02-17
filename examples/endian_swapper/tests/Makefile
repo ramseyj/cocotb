@@ -29,33 +29,41 @@
 
 
 # Override this variable to use VHPI instead of VPI
-GPI_IMPL ?= vpi
+TOPLEVEL_LANG ?= verilog
 
-
-
+WPWD=$(shell sh -c 'pwd -W')
 PWD=$(shell pwd)
 COCOTB=$(PWD)/../../..
 
+ifeq ($(OS),Msys)
+WPWD=$(shell sh -c 'pwd -W')
+PYTHONPATH := $(PWD)/../cosim;$(PYTHONPATH)
+else
+WPWD=$(shell pwd)
+PYTHONPATH := $(PWD)/../cosim:$(PYTHONPATH)
+endif
+export PYTHONPATH
 
-ifeq ($(GPI_IMPL),vpi)
-    VERILOG_SOURCES = $(PWD)/../hdl/endian_swapper.sv
+ifeq ($(TOPLEVEL_LANG),verilog)
+    VERILOG_SOURCES = $(WPWD)/../hdl/endian_swapper.sv
     TOPLEVEL = endian_swapper_sv
+    GPI_IMPL=vpi
 endif
 
-ifeq ($(GPI_IMPL),vhpi)
-    VHDL_SOURCES = $(PWD)/../hdl/endian_swapper.vhdl
+ifeq ($(TOPLEVEL_LANG),vhdl)
+    VHDL_SOURCES = $(WPWD)/../hdl/endian_swapper.vhdl
     TOPLEVEL = endian_swapper_vhdl
+    GPI_IMPL=vhpi
 endif
+
+export TOPLEVEL_LANG
 
 MODULE=test_endian_swapper
 
 CUSTOM_COMPILE_DEPS = hal
-PYTHONPATH := $(PWD)/../cosim:$(PYTHONPATH)
-export PYTHONPATH
 
 LD_LIBRARY_PATH := $(PWD)/../cosim:$(LD_LIBRARY_PATH)
 export LD_LIBRARY_PATH
-
 
 include $(COCOTB)/makefiles/Makefile.inc
 include $(COCOTB)/makefiles/Makefile.sim
@@ -79,5 +87,5 @@ profile:
 clean::
 	-rm -rf test_profile.pstat
 	-rm -rf callgraph.svg
-
+	-cd ../cosim && make clean
 

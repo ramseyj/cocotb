@@ -30,14 +30,21 @@
 // Embed Python into the simulator using GPI
 
 #include <Python.h>
-#include <dlfcn.h>
+#include <cocotb_utils.h>
 #include "embed.h"
+#include "../compat/python3_compat.h"
 
 static PyThreadState *gtstate = NULL;
 
+#if PY_MAJOR_VERSION >= 3
+static wchar_t progname[] = L"cocotb";
+static wchar_t *argv[] = { progname };
+#else
 static char progname[] = "cocotb";
 static char *argv[] = { progname };
-static PyObject *pEventFn;
+#endif
+
+static PyObject *pEventFn = NULL;
 
 
 /**
@@ -52,9 +59,6 @@ static PyObject *pEventFn;
  * Stores the thread state for cocotb in static variable gtstate
  */
 
-#define xstr(a) str(a)
-#define str(a) #a
-
 void embed_init_python(void)
 {
     FENTER;
@@ -65,14 +69,14 @@ void embed_init_python(void)
 #define PY_SO_LIB xstr(PYTHON_SO_LIB)
 #endif
 
-    void *ret = dlopen(PY_SO_LIB, RTLD_LAZY | RTLD_GLOBAL);
-    if (!ret) {
-        fprintf(stderr, "Failed to find python lib %s (%s)\n", PY_SO_LIB, dlerror());
-    }
-
     // Don't initialise python if already running
     if (gtstate)
         return;
+
+    void * ret = utils_dyn_open(PY_SO_LIB);
+    if (!ret) {
+        fprintf(stderr, "Failed to find python lib\n");
+    }
 
     Py_SetProgramName(progname);
     Py_Initialize();                    /* Initialize the interpreter */
@@ -104,7 +108,7 @@ void embed_init_python(void)
 
 int get_module_ref(const char *modname, PyObject **mod)
 {
-    PyObject *pModule = PyImport_Import(PyString_FromString(modname));
+    PyObject *pModule = PyImport_ImportModule(modname);
 
     if (pModule == NULL) {
         PyErr_Print();
@@ -116,19 +120,23 @@ int get_module_ref(const char *modname, PyObject **mod)
     return 0;
 }
 
-void embed_sim_init(gpi_sim_info_t *info)
+int embed_sim_init(gpi_sim_info_t *info)
 {
     FENTER
 
     int i;
+    int ret = 0;
+
+    /* Check that we are not already initialised */
+    if (pEventFn)
+        return ret;
 
     // Find the simulation root
-    gpi_sim_hdl dut = gpi_get_root_handle(getenv("TOPLEVEL"));
+    const char *dut = getenv("TOPLEVEL");
 
     if (dut == NULL) {
         fprintf(stderr, "Unable to find root instance!\n");
-        gpi_sim_end();
-        return;
+        return -1;
     }
 
     PyObject *cocotb_module, *cocotb_init, *cocotb_args, *cocotb_retval;
@@ -212,6 +220,19 @@ void embed_sim_init(gpi_sim_info_t *info)
         goto cleanup;
     }
 
+    // Set language in use as an attribute to cocotb module, or None if not provided
+    const char *lang = getenv("TOPLEVEL_LANG");
+    PyObject* PyLang;
+    if (lang)
+        PyLang = PyString_FromString(lang);
+    else
+        PyLang = Py_None;
+
+    if (-1 == PyObject_SetAttrString(cocotb_module, "LANGUAGE", PyLang)) {
+        fprintf(stderr, "Unable to set LANGUAGE");
+        goto cleanup;
+    }
+
     // Hold onto a reference to our _fail_test function
     pEventFn = PyObject_GetAttrString(cocotb_module, "_sim_event");
 
@@ -233,7 +254,7 @@ void embed_sim_init(gpi_sim_info_t *info)
     }
 
     cocotb_args = PyTuple_New(1);
-    PyTuple_SetItem(cocotb_args, 0, PyLong_FromLong((long)dut));        // Note: This function “steals” a reference to o.
+    PyTuple_SetItem(cocotb_args, 0, PyString_FromString(dut));        // Note: This function “steals” a reference to o.
     cocotb_retval = PyObject_CallObject(cocotb_init, cocotb_args);
 
     if (cocotb_retval != NULL) {
@@ -241,14 +262,16 @@ void embed_sim_init(gpi_sim_info_t *info)
         Py_DECREF(cocotb_retval);
     } else {
         PyErr_Print();
-        fprintf(stderr,"Call failed\n");
-        gpi_sim_end();
-        goto cleanup;
+        fprintf(stderr,"Cocotb initialisation failed - exiting\n");
+	exit(1);
     }
 
     FEXIT
+    goto ok;
 
 cleanup:
+    ret = -1;
+ok:
     if (cocotb_module) {
         Py_DECREF(cocotb_module);
     }
@@ -256,6 +279,8 @@ cleanup:
         Py_DECREF(arg_dict);
     }
     PyGILState_Release(gstate);
+
+    return ret;
 }
 
 void embed_sim_event(gpi_event_t level, const char *msg)
@@ -269,11 +294,12 @@ void embed_sim_event(gpi_event_t level, const char *msg)
 
         PyObject *fArgs = PyTuple_New(2);
         PyTuple_SetItem(fArgs, 0, PyInt_FromLong(level));
+
         if (msg != NULL)
             PyTuple_SetItem(fArgs, 1, PyString_FromString(msg));
         else
             PyTuple_SetItem(fArgs, 1, PyString_FromString("No message provided"));
-        PyObject *pValue = PyObject_Call(pEventFn, fArgs, NULL);
+        PyObject *pValue = PyObject_CallObject(pEventFn, fArgs);
         if (!pValue) {
             LOG_ERROR("Passing event to upper layer failed");
         }

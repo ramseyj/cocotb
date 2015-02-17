@@ -30,7 +30,11 @@
 
 TOPLEVEL = tb_top
 
+ifeq ($(OS),Msys)
+PWD=$(shell sh -c 'pwd -W')
+else
 PWD=$(shell pwd)
+endif
 
 VERILOG_SOURCES = $(PWD)/tb_top.v
 MODULE=plusargs
