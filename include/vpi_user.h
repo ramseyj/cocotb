@@ -36,26 +36,171 @@
 
 #include <stdarg.h>
 
+
+
 #ifdef  __cplusplus
 extern "C" {
 #endif
 
+#if !defined(__linux__) && !defined(__APPLE__)
+#ifndef VPI_DLLISPEC
+#define VPI_DLLISPEC __declspec(dllimport)
+#define VPI_DLL_LOCAL 1
+#endif
+#else
+#ifndef VPI_DLLISPEC
+#define VPI_DLLISPEC
+#endif
+#endif
+
 typedef uint32_t *vpiHandle;
 
-#define vpiNet                 36   /* scalar or vector net */
-#define vpiModule              32   /* module instance */
+/******************************** OBJECT TYPES ********************************/
+
+#define vpiAlways                1   /* always procedure */
+#define vpiAssignStmt            2   /* quasi-continuous assignment */
+#define vpiAssignment            3   /* procedural assignment */
+#define vpiBegin                 4   /* block statement */
+#define vpiCase                  5   /* case statement */
+#define vpiCaseItem              6   /* case statement item */
+#define vpiConstant              7   /* numerical constant or string literal */
+#define vpiContAssign            8   /* continuous assignment */
+#define vpiDeassign              9   /* deassignment statement */
+#define vpiDefParam             10   /* defparam */
+#define vpiDelayControl         11   /* delay statement (e.g., #10) */
+#define vpiDisable              12   /* named block disable statement */
+#define vpiEventControl         13   /* wait on event, e.g., @e */
+#define vpiEventStmt            14   /* event trigger, e.g., ->e */
+#define vpiFor                  15   /* for statement */
+#define vpiForce                16   /* force statement */
+#define vpiForever              17   /* forever statement */
+#define vpiFork                 18   /* fork-join block */
+#define vpiFuncCall             19   /* function call */
+#define vpiFunction             20   /* function */
+#define vpiGate                 21   /* primitive gate */
+#define vpiIfElse               23   /* if-else statement */
+#define vpiInitial              24   /* initial procedure */
+#define vpiIntegerVar           25   /* integer variable */
+#define vpiInterModPath         26   /* intermodule wire delay */
+#define vpiIterator             27   /* iterator */
+#define vpiIODecl               28   /* input/output declaration */
+#define vpiMemory               29   /* behavioral memory */
+#define vpiMemoryWord           30   /* single word of memory */
+#define vpiModPath              31   /* module path for path delays */
+#define vpiModule               32   /* module instance */
+#define vpiNamedBegin           33   /* named block statement */
+#define vpiNamedEvent           34   /* event variable */
+#define vpiNamedFork            35   /* named fork-join block */
+#define vpiNet                  36   /* scalar or vector net */
+#define vpiNetBit               37   /* bit of vector net */
+#define vpiNullStmt             38   /* a semicolon. Ie. #10 ; */
+#define vpiOperation            39   /* behavioral operation */
+#define vpiParamAssign          40   /* module parameter assignment */
+#define vpiParameter            41   /* module parameter */
+#define vpiPartSelect           42   /* part-select */
+#define vpiPathTerm             43   /* terminal of module path */
+#define vpiPort                 44   /* module port */
+#define vpiPortBit              45   /* bit of vector module port */
+#define vpiPrimTerm             46   /* primitive terminal */
+#define vpiRealVar              47   /* real variable */
+#define vpiReg                  48   /* scalar or vector reg */
+#define vpiRegBit               49   /* bit of vector reg */
+#define vpiRelease              50   /* release statement */
+#define vpiRepeat               51   /* repeat statement */
+#define vpiRepeatControl        52   /* repeat control in an assign stmt */
+#define vpiSchedEvent           53   /* vpi_put_value() event */
+#define vpiSpecParam            54   /* specparam */
+#define vpiSwitch               55   /* transistor switch */
+#define vpiSysFuncCall          56   /* system function call */
+#define vpiSysTaskCall          57   /* system task call */
+#define vpiTableEntry           58   /* UDP state table entry */
+#define vpiTask                 59   /* task */
+#define vpiTaskCall             60   /* task call */
+#define vpiTchk                 61   /* timing check */
+#define vpiTchkTerm             62   /* terminal of timing check */
+#define vpiTimeVar              63   /* time variable */
+#define vpiTimeQueue            64   /* simulation event queue */
+#define vpiUdp                  65   /* user-defined primitive */
+#define vpiUdpDefn              66   /* UDP definition */
+#define vpiUserSystf            67   /* user-defined system task/function */
+#define vpiVarSelect            68   /* variable array selection */
+#define vpiWait                 69   /* wait statement */
+#define vpiWhile                70   /* while statement */
+
+
+#define vpiPrimitive           103   /* primitive (gate, switch, UDP) */
+
+/********************** object types added with 1364-2001 *********************/
+
+#define vpiAttribute           105   /* attribute of an object */
+#define vpiBitSelect           106   /* Bit-select of parameter, var select */
+#define vpiCallback            107   /* callback object */
+#define vpiDelayTerm           108   /* Delay term which is a load or driver */
+#define vpiDelayDevice         109   /* Delay object within a net */
+#define vpiFrame               110   /* reentrant task/func frame */
+#define vpiGateArray           111   /* gate instance array */
+#define vpiModuleArray         112   /* module instance array */
+#define vpiPrimitiveArray      113   /* vpiprimitiveArray type */
+#define vpiNetArray            114   /* multidimensional net */
+#define vpiRange               115   /* range declaration */
+#define vpiRegArray            116   /* multidimensional reg */
+#define vpiSwitchArray         117   /* switch instance array */
+#define vpiUdpArray            118   /* UDP instance array */
+#define vpiContAssignBit       128   /* Bit of a vector continuous assignment */
+#define vpiNamedEventArray     129   /* multidimensional named event */
+
+#define vpiInterface           601
+#define vpiInterfaceArray      603
+#define vpiModport             606
+#define vpiRefObj              608
+#define vpiIntVar              612
+#define vpiEnumVar             617
 #define vpiStructVar           618
+#define vpiPackedArrayVar      623
+#define vpiEnumNet             680  /* SystemVerilog */
+#define vpiIntegerNet          681
+#define vpiStructNet           683
 
-#define vpiStop                66  /* execute simulator's $stop */
-#define vpiFinish              67  /* execute simulator's $finish */
-#define vpiReset               68  /* execute simulator's $reset */
 
-#define vpiType                 1   /* type of object */
-#define vpiName                 2   /* local name of object */
-#define vpiFullName             3   /* full hierarchical name */
+#define vpiStop                 66  /* execute simulator's $stop */
+#define vpiFinish               67  /* execute simulator's $finish */
+#define vpiReset                68  /* execute simulator's $reset */
 
-#define vpiNoDelay              1
-#define vpiInertialDelay        2
+/********************** object types added with 1364-2005 *********************/
+
+#define vpiIndexedPartSelect   130   /* Indexed part-select object */
+#define vpiGenScopeArray       133   /* array of generated scopes */
+#define vpiGenScope            134   /* A generated scope */
+#define vpiGenVar              135   /* Object used to instantiate gen scopes */
+
+#define vpiType                  1   /* type of object */
+#define vpiName                  2   /* local name of object */
+#define vpiFullName              3   /* full hierarchical name */
+#define vpiSize                  4   /* size of gate, net, port, etc. */
+
+#define vpiNoDelay               1
+#define vpiInertialDelay         2
+
+/* One 2 many relationships */
+#define vpiArgument             89   /* argument to (system) task/function */
+#define vpiBit                  90   /* bit of vector net or port */
+#define vpiDriver               91   /* driver for a net */
+#define vpiInternalScope        92   /* internal scope in module */
+#define vpiLoad                 93   /* load on net or reg */
+#define vpiModDataPathIn        94   /* data terminal of a module path */
+#define vpiModPathIn            95   /* Input terminal of a module path */
+#define vpiModPathOut           96   /* output terminal of a module path */
+#define vpiOperand              97   /* operand of expression */
+#define vpiPortInst             98   /* connected port instance */
+#define vpiProcess              99   /* process in module */
+#define vpiVariables           100   /* variables in module */
+#define vpiUse                 101   /* usage */
+
+#define vpiStop                 66  /* execute simulator's $stop */
+#define vpiFinish               67  /* execute simulator's $finish */
+#define vpiReset                68  /* execute simulator's $reset */
+
+
 
 typedef struct t_vpi_time
 {
@@ -143,6 +288,8 @@ typedef struct t_vpi_value
 #define vpiFile               5
 #define vpiLineNo             6
 
+#define vpiUnknown            3
+
 /* normal callback structure */
 typedef struct t_cb_data
 {
@@ -184,7 +331,6 @@ typedef struct t_cb_data
 #define cbUnresolvedSystf        24
 
 /* Object Types */
-#define vpiPort                 44
 #define vpiMember               742
 
 /* error severity levels */
@@ -223,58 +369,63 @@ typedef struct t_vpi_systf_data {
 #define vpiArgument    89
 
 
-extern vpiHandle  vpi_register_cb(p_cb_data cb_data_p);
+extern VPI_DLLISPEC vpiHandle  vpi_register_cb(p_cb_data cb_data_p);
 
-extern int32_t    vpi_remove_cb(vpiHandle cb_obj);
+extern VPI_DLLISPEC int32_t    vpi_remove_cb(vpiHandle cb_obj);
 
-extern vpiHandle  vpi_handle_by_name(char *name,
+extern VPI_DLLISPEC vpiHandle  vpi_handle_by_name(char *name,
                                      vpiHandle scope);
 
-extern vpiHandle  vpi_handle_by_index(vpiHandle object,
+extern VPI_DLLISPEC vpiHandle  vpi_handle_by_index(vpiHandle object,
                                       int32_t indx);
 
-extern vpiHandle  vpi_handle(int32_t type,
+extern VPI_DLLISPEC vpiHandle  vpi_handle(int32_t type,
                              vpiHandle refHandle);
 
-extern vpiHandle  vpi_iterate(int32_t type,
+extern VPI_DLLISPEC vpiHandle  vpi_iterate(int32_t type,
                               vpiHandle refHandle);
 
-extern vpiHandle  vpi_scan(vpiHandle iterator);
+extern VPI_DLLISPEC vpiHandle  vpi_scan(vpiHandle iterator);
 
-extern char      *vpi_get_str(int32_t property,
+extern VPI_DLLISPEC char      *vpi_get_str(int32_t property,
                               vpiHandle object);
 
-extern void       vpi_get_value(vpiHandle expr,
+extern VPI_DLLISPEC void       vpi_get_value(vpiHandle expr,
                                 p_vpi_value value_p);
 
-extern vpiHandle  vpi_put_value(vpiHandle object,
+extern VPI_DLLISPEC vpiHandle  vpi_put_value(vpiHandle object,
                                 p_vpi_value value_p,
                                 p_vpi_time time_p,
                                 int32_t flags);
 
-extern void       vpi_get_time(vpiHandle object,
+extern VPI_DLLISPEC void       vpi_get_time(vpiHandle object,
                                p_vpi_time time_p);
 
-extern int32_t    vpi_get(int property,
+extern VPI_DLLISPEC int32_t    vpi_get(int property,
                           vpiHandle ref);
 
-extern int32_t    vpi_free_object(vpiHandle object);
+extern VPI_DLLISPEC int32_t    vpi_free_object(vpiHandle object);
 
-extern int32_t    vpi_control(int32_t operation, ...);
-extern vpiHandle  vpi_handle_by_multi_index(vpiHandle obj,
+extern VPI_DLLISPEC int32_t    vpi_control(int32_t operation, ...);
+extern VPI_DLLISPEC vpiHandle  vpi_handle_by_multi_index(vpiHandle obj,
                                             int32_t num_index,
                                             int32_t *index_array);
 
 
-extern int32_t    vpi_chk_error(p_vpi_error_info);
+extern VPI_DLLISPEC int32_t    vpi_chk_error(p_vpi_error_info);
 
-extern int32_t    vpi_get_vlog_info(p_vpi_vlog_info info_p);
+extern VPI_DLLISPEC int32_t    vpi_get_vlog_info(p_vpi_vlog_info info_p);
 
-extern vpiHandle  vpi_register_systf(p_vpi_systf_data data_p);
+extern VPI_DLLISPEC vpiHandle  vpi_register_systf(p_vpi_systf_data data_p);
 
-extern int32_t    vpi_printf(const char *fmt, ...) __attribute__((format (printf,1,2)));
+extern VPI_DLLISPEC int32_t    vpi_printf(const char *fmt, ...) __attribute__((format (printf,1,2)));
 
-extern void (*vlog_startup_routines[])(void);
+extern VPI_DLLISPEC void (*vlog_startup_routines[])(void);
+
+#ifdef VPI_DLL_LOCAL
+#undef VPI_DLL_LOCAL
+#undef VPI_DLLISPEC
+#endif
 
 #ifdef  __cplusplus
 }

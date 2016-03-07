@@ -36,43 +36,50 @@ ifndef GPI_IMPL
    $(error "Unable to determine appropriate GPI layer to use")
 endif
 
+# FIXME it's a bit nasty to have the source files listed here as dependencies
+# but better than re-building the libraries every time.
+
 $(LIB_OBJ_DIR):
 	mkdir -p $@
 
 $(LIB_DIR): $(LIB_OBJ_DIR)
 	mkdir -p $@
 
-cocotb-export:
-	make -C $(SIM_ROOT)/lib/embed export
-
-gpi-export:
-	make -C $(SIM_ROOT)/lib/gpi_impl export
-
-gpilog-export:
-	make -C $(SIM_ROOT)/lib/gpi_log export
-
-cocotb:
-	make -C $(SIM_ROOT)/lib/embed EXTRA_LIBS=$(EXTRA_LIBS) EXTRA_LIBDIRS=$(EXTRA_LIBDIRS) EXTRA_GCC_ARGS=$(EXTRA_GCC_ARGS)
-
-gpi:
-	make -C $(SIM_ROOT)/lib/gpi_impl EXTRA_LIBS=$(EXTRA_LIBS) EXTRA_LIBDIRS=$(EXTRA_LIBDIRS) EXTRA_GCC_ARGS=$(EXTRA_GCC_ARGS)
-
-gpilog:
+$(LIB_DIR)/libgpilog.$(LIB_EXT): $(SIM_ROOT)/lib/gpi_log/gpi_logging.c | $(LIB_DIR)
 	make -C $(SIM_ROOT)/lib/gpi_log
 
-simulator:
+$(LIB_DIR)/libcocotb.$(LIB_EXT): $(SIM_ROOT)/lib/embed/gpi_embed.c | $(LIB_DIR)
+	make -C $(SIM_ROOT)/lib/embed
+
+$(LIB_DIR)/libvpi.$(LIB_EXT): $(SIM_ROOT)/lib/vpi/VpiImpl.cpp $(SIM_ROOT)/lib/vpi/VpiCbHdl.cpp | $(LIB_DIR)
+	make -C $(SIM_ROOT)/lib/vpi EXTRA_LIBS=$(EXTRA_LIBS) EXTRA_LIBDIRS=$(EXTRA_LIBDIRS)
+
+$(LIB_DIR)/libvhpi.$(LIB_EXT): $(SIM_ROOT)/lib/vhpi/VhpiImpl.cpp $(SIM_ROOT)/lib/vhpi/VhpiCbHdl.cpp | $(LIB_DIR)
+	make -C $(SIM_ROOT)/lib/vhpi EXTRA_LIBS=$(EXTRA_LIBS) EXTRA_LIBDIRS=$(EXTRA_LIBDIRS)
+
+$(LIB_DIR)/libgpi.$(LIB_EXT): $(SIM_ROOT)/lib/gpi/GpiCommon.cpp $(SIM_ROOT)/lib/gpi/GpiCbHdl.cpp | $(LIB_DIR)
+	make -C $(SIM_ROOT)/lib/gpi EXTRA_LIBS=$(EXTRA_LIBS) EXTRA_LIBDIRS=$(EXTRA_LIBDIRS)
+
+$(LIB_DIR)/libfli.$(LIB_EXT): $(SIM_ROOT)/lib/fli/FliImpl.cpp $(SIM_ROOT)/lib/fli/FliCbHdl.cpp $(SIM_ROOT)/lib/fli/FliObjHdl.cpp | $(LIB_DIR)
+	make -C $(SIM_ROOT)/lib/fli EXTRA_LIBS=$(EXTRA_LIBS) EXTRA_LIBDIRS=$(EXTRA_LIBDIRS)
+
+$(LIB_DIR)/libsim.$(LIB_EXT): $(SIM_ROOT)/lib/simulator/simulatormodule.c | $(LIB_DIR)
 	make -C $(SIM_ROOT)/lib/simulator
 
-COCOTB_LIBS = $(LIB_DIR)
-ifeq ($(OS), CYGWIN)
-COCOTB_LIBS += cocotb-export \
-	       gpi-export \
-	       gpilog-export
-endif
-COCOTB_LIBS += gpilog \
-	       gpi \
-	       cocotb \
-	       simulator
+$(LIB_DIR)/libcocotbutils.$(LIB_EXT): $(SIM_ROOT)/lib/utils/cocotb_utils.c | $(LIB_DIR)
+	make -C $(SIM_ROOT)/lib/utils
+
+COCOTB_LIBS := $(LIB_DIR)/libcocotbutils.$(LIB_EXT) \
+	       $(LIB_DIR)/libgpilog.$(LIB_EXT) \
+	       $(LIB_DIR)/libcocotb.$(LIB_EXT) \
+	       $(LIB_DIR)/libgpi.$(LIB_EXT) \
+	       $(LIB_DIR)/libsim.$(LIB_EXT) \
+
+COCOTB_VPI_LIB := $(LIB_DIR)/libvpi.$(LIB_EXT)
+
+COCOTB_VHPI_LIB := $(LIB_DIR)/libvhpi.$(LIB_EXT)
+
+COCOTB_FLI_LIB := $(LIB_DIR)/libfli.$(LIB_EXT)
 
 clean::
 	-@rm -rf $(BUILD_DIR)

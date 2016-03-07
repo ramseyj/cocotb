@@ -39,11 +39,20 @@ clean:
 	-@rm -rf $(BUILD_DIR)
 	-@find . -name "obj" | xargs rm -rf
 	-@find . -name "*.pyc" | xargs rm -rf
-	-@find . -name "results.xml" | xargs rm -rf
+	-@find . -name "*results.xml" | xargs rm -rf
 	$(MAKE) -C examples clean
+	$(MAKE) -C tests clean
 
-test: 
-	$(MAKE) -k -C examples
+do_tests: 
+	$(MAKE) -k -C tests
+
+# For jenkins we use the exit code to detect compile errors or catestrphic
+# failures and the xml to track test results
+jenkins: do_tests
+	./bin/combine_results.py --squash_rc
+
+# By default want the exit code to indicate the test results
+test: do_tests
 	./bin/combine_results.py
 
 pycode:
@@ -80,6 +89,7 @@ help:
 	@echo -e "install\t\t- Build and install libaries to FULL_INSTALL_DIR (default=$(FULL_INSTALL_DIR))"
 	@echo -e "win-install\t- Build and install for Windows environment"
 	@echo -e "clean\t\t- Clean the build dir\n\n"
+	@echo -e "debug\t- Dump out some useful debug info\n\n"
 	@echo -e "To build natively just run make.\nTo build for 32bit on a 64 bit system set ARCH=i686\n"
 	@echo -e "Default simulator is Icarus. To use another set environment variable SIM as below\n"
 	@for X in $(shell ls makefiles/simulators/); do \

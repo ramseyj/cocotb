@@ -44,56 +44,55 @@ ARCH?=$(shell uname -m)
 export ARCH
 
 OS=$(shell uname)
-ifeq ($(findstring CYGWIN, $(OS)), CYGWIN)
-     OS=CYGWIN
+ifneq (, $(findstring MINGW, $(OS)))
+OS=Msys
+else ifneq (, $(findstring MSYS, $(OS)))
+OS=Msys
 endif
 export OS
-
-ifeq ($(OS), CYGWIN)
-# Define function for converting paths to Windows format
-cygpath = $(shell cygpath -p -w "$(1)")
-endif
 
 include $(SIM_ROOT)/makefiles/Makefile.paths
 include $(SIM_ROOT)/makefiles/Makefile.pylib
 
 export LIB_DIR=$(BUILD_DIR)/libs/$(ARCH)
 export LIB_OBJ_DIR:= $(BUILD_DIR)/obj/$(ARCH)
-ifeq ($(OS), CYGWIN)
-INCLUDES := -I"$(call cygpath,$(SIM_ROOT))\include"
-else
-INCLUDES := -I$(SIM_ROOT)/include
-endif
+export INCLUDES := -I$(SIM_ROOT)/include -I$(PYTHON_INCLUDEDIR)
 
-INCLUDES += $(PYTHON_INCLUDEDIR)
-
-export INCLUDES
+LIB_EXT     := so
+PY_EXT	    := so
 
 # Base GCC flags
-ifeq ($(OS),Darwin)
-GCC_ARGS    :=  -g -DDEBUG -fpic
-else
-GCC_ARGS	:=	-Werror -Wcast-qual -Wcast-align -Wwrite-strings \
-			-Waggregate-return -Wstrict-prototypes -Wall     \
-			-Wno-unused-parameter -fno-common -g -DDEBUG
-ifneq ($(OS),CYGWIN)
-GCC_ARGS    += -fpic
-endif
 ifeq ($(ARCH),i686)
-GCC_ARGS    += -m32
+GXX_ARGS    := -m32
 endif
-endif
-
 
 ifeq ($(OS),Darwin)
-LINKER_ARGS := -shared -undefined suppress -flat_namespace -L$(PYTHON_LIBDIR)
+GXX_ARGS	+= -g -DDEBUG -fpic
+GCC_ARGS	:= $(GXX_ARGS)
+else ifeq ($(OS),Msys)
+GXX_ARGS 	+= -g -DDEBUG -shared
+ifeq ($(ARCH),x86_64)
+GXX_ARGS  += -DMS_WIN64
+endif
+GCC_ARGS	:= $(GXX_ARGS)
+LIB_EXT		:= dll
+PY_EXT		:= pyd
+else ifeq ($(OS),Linux)
+GXX_ARGS	+= -Werror -Wcast-qual -Wcast-align -Wwrite-strings \
+			-Wall -Wno-unused-parameter \
+			-fno-common -g -DDEBUG -fpic
+GCC_ARGS	= $(GXX_ARGS) -Wstrict-prototypes -Waggregate-return
 else
-LINKER_ARGS := -shared -Xlinker -L$(PYTHON_LIBDIR)
+$(error "Unsupported os " $(OS))
 endif
 
-ifeq ($(OS), CYGWIN)
-export SO_EXT=dll
+ifeq ($(OS),Darwin)
+SO_LINKER_ARGS := -shared -undefined suppress -flat_namespace -L$(PYTHON_LIBDIR)
+else ifeq ($(OS),Linux)
+SO_LINKER_ARGS := -shared -Xlinker -L$(PYTHON_LIBDIR)
+else ifeq ($(OS),Msys)
+SO_LINKER_ARGS :=  -shared -Wl,-no-undefined -Wl,-enable-runtime-pseudo-reloc-v2 \
+			-Wl,--enable-auto-import -L$(PYTHON_LIBDIR)
 else
-export SO_EXT=so
+$(error "Unsupported os" $(OS))
 endif
-

@@ -1,5 +1,8 @@
 **cocotb** is a coroutine based cosimulation library for writing VHDL and Verilog testbenches in Python.
 
+[![Documentation Status](https://readthedocs.org/projects/cocotb/badge/?version=latest)](http://cocotb.readthedocs.org/en/latest/)
+[![Build Status](https://travis-ci.org/potentialventures/cocotb.svg?branch=master)](https://travis-ci.org/potentialventures/cocotb)
+[![Coverity Scan Status] (https://scan.coverity.com/projects/6110/badge.svg)](https://scan.coverity.com/projects/cocotb)
 
 * Skim the introductory presentation: http://potential.ventures
 * Read the [documentation](http://cocotb.readthedocs.org)
@@ -20,7 +23,7 @@
     make
     
     # View the waveform
-    gtkwave sim_build/waveform.vcd
+    gtkwave waveform.vcd
 
 
 ## Tutorials and examples

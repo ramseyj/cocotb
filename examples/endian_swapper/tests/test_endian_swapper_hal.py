@@ -35,6 +35,7 @@ from cocotb.result import ReturnValue, TestFailure
 import hal
 import io_module
 
+
 @cocotb.coroutine
 def reset(dut, duration=10000):
     dut.log.debug("Resetting DUT")
@@ -80,11 +81,12 @@ def initial_hal_test(dut, debug=True):
 
     # Check the actual value
     if dut.byteswapping.value:
-        raise TestFailure("Byteswapping is enabled but havne't configured DUT")
+        raise TestFailure("Byteswapping is enabled but haven't configured DUT")
 
     yield cocotb.external(hal.endian_swapper_enable)(state)
 
     if not dut.byteswapping.value:
-        raise TestFailure("Byteswapping wasn't enabled after calling endian_swapper_enable")
+        raise TestFailure("Byteswapping wasn't enabled after calling "
+                          "endian_swapper_enable")
 
     dut.log.info("HAL call endian_swapper_enable successfully enabled the DUT")

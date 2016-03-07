@@ -27,38 +27,9 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ###############################################################################
 
-VPI_LIB := vpi
+# Modelsim is (no longer) 32-bit only
+#ARCH:=i686
 
-# Modelsim is 32-bit only
-ARCH:=i686
-
-ifdef VERILOG_INCLUDE_DIRS
-VLOG_ARGS += +incdir+$(VERILOG_INCLUDE_DIRS)
-endif
-
-ifeq ($(GUI),1)
-SIM_CMD = vsim -gui
-else
-SIM_CMD = vsim -c
-endif
-
-
-runsim.do : $(VERILOG_SOURCES) $(CUSTOM_SIM_DEPS)
-	echo "vlib work" > $@
-	echo "vlog -timescale 1ns/100ps -mfcu +acc=rmb -sv $(VLOG_ARGS) $(VERILOG_SOURCES)" >> $@
-	echo "vsim -pli libgpi.so  $(VSIM_ARGS) work.$(TOPLEVEL) -onfinish stop" >> $@
-ifneq ($(GUI),1)
-	echo "run -all" >> $@
-	echo "exit" >> $@
-endif
-
-
-results.xml: runsim.do $(COCOTB_LIBS)
-	LD_LIBRARY_PATH=$(LIB_DIR)::$(LD_LIBRARY_PATH) MODULE=$(MODULE) TESTCASE=$(TESTCASE) TOPLEVEL=$(TOPLEVEL) \
-	PYTHONPATH=$(LIB_DIR):$(SIM_ROOT):$(PWD):$(PYTHONPATH) \
-	$(SIM_CMD) -do runsim.do 2>&1 | tee sim.log
-
-clean::
-	-rm -rf runsim.do
-	-rm -rf sim.log
+# Everything else is identical to Quest
+include $(SIM_ROOT)/makefiles/simulators/Makefile.questa
 

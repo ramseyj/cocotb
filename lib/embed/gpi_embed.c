@@ -30,13 +30,25 @@
 // Embed Python into the simulator using GPI
 
 #include <Python.h>
+#include <cocotb_utils.h>
 #include "embed.h"
+#include "../compat/python3_compat.h"
 
-static PyThreadState *gtstate;
+#if defined(_WIN32)
+#include <windows.h>
+#define sleep(n) Sleep(1000 * n)
+#endif
+static PyThreadState *gtstate = NULL;
 
+#if PY_MAJOR_VERSION >= 3
+static wchar_t progname[] = L"cocotb";
+static wchar_t *argv[] = { progname };
+#else
 static char progname[] = "cocotb";
 static char *argv[] = { progname };
-static PyObject *pEventFn;
+#endif
+
+static PyObject *pEventFn = NULL;
 
 
 /**
@@ -50,13 +62,25 @@ static PyObject *pEventFn;
  *
  * Stores the thread state for cocotb in static variable gtstate
  */
+
 void embed_init_python(void)
 {
     FENTER;
 
+#ifndef PYTHON_SO_LIB
+#error "Python version needs passing in with -DPYTHON_SO_VERSION=libpython<ver>.so"
+#else
+#define PY_SO_LIB xstr(PYTHON_SO_LIB)
+#endif
+
     // Don't initialise python if already running
     if (gtstate)
         return;
+
+    void * ret = utils_dyn_open(PY_SO_LIB);
+    if (!ret) {
+        fprintf(stderr, "Failed to find python lib\n");
+    }
 
     Py_SetProgramName(progname);
     Py_Initialize();                    /* Initialize the interpreter */
@@ -65,6 +89,26 @@ void embed_init_python(void)
 
     /* Swap out and return current thread state and release the GIL */
     gtstate = PyEval_SaveThread();
+
+    /* Before returning we check if the user wants pause the simulator thread
+       such that they can attach */
+    const char *pause = getenv("COCOTB_ATTACH");
+    if (pause) {
+        long sleep_time = strtol(pause, NULL, 10);
+        if (errno == ERANGE && (sleep_time == LONG_MAX || sleep_time == LONG_MIN)) {
+            fprintf(stderr, "COCOTB_ATTACH only needs to be set to ~30 seconds");
+            goto out;
+        }
+        if ((errno != 0 && sleep_time == 0) ||
+            (sleep_time <= 0)) {
+            fprintf(stderr, "COCOTB_ATTACH must be set to an integer base 10 or omitted");
+            goto out;
+        }
+
+        fprintf(stderr, "Waiting for %lu seconds - Attach to %d\n", sleep_time, getpid());
+        sleep(sleep_time);
+    }
+out:
     FEXIT;
 }
 
@@ -88,7 +132,7 @@ void embed_init_python(void)
 
 int get_module_ref(const char *modname, PyObject **mod)
 {
-    PyObject *pModule = PyImport_Import(PyString_FromString(modname));
+    PyObject *pModule = PyImport_ImportModule(modname);
 
     if (pModule == NULL) {
         PyErr_Print();
@@ -100,20 +144,35 @@ int get_module_ref(const char *modname, PyObject **mod)
     return 0;
 }
 
-void embed_sim_init(gpi_sim_info_t *info)
+int embed_sim_init(gpi_sim_info_t *info)
 {
     FENTER
 
     int i;
+    int ret = 0;
+
+    /* Check that we are not already initialised */
+    if (pEventFn)
+        return ret;
 
     // Find the simulation root
-    gpi_sim_hdl dut = gpi_get_root_handle(getenv("TOPLEVEL"));
+    const char *dut = getenv("TOPLEVEL");
 
-    if (dut == NULL) {
-        fprintf(stderr, "Unable to find root instance!\n");
-        gpi_sim_end();
-        return;
+    if (dut != NULL) {
+        if (!strcmp("", dut)) {
+            /* Empty string passed in, treat as NULL */
+            dut = NULL;
+        } else {
+            // Skip any library component of the toplevel
+            char *dot = strchr(dut, '.');
+            if (dot != NULL) {
+                dut += (dot - dut + 1);
+            }
+        }
     }
+
+
+
 
     PyObject *cocotb_module, *cocotb_init, *cocotb_args, *cocotb_retval;
     PyObject *simlog_obj, *simlog_func;
@@ -128,8 +187,8 @@ void embed_sim_init(gpi_sim_info_t *info)
     if (get_module_ref(COCOTB_MODULE, &cocotb_module))
         goto cleanup;
 
-    // Create a logger object
-    simlog_obj = PyObject_GetAttrString(cocotb_module, "log");
+    // Obtain the loggpi logger object
+    simlog_obj = PyObject_GetAttrString(cocotb_module, "loggpi");
 
     if (simlog_obj == NULL) {
         PyErr_Print();
@@ -190,6 +249,24 @@ void embed_sim_init(gpi_sim_info_t *info)
     LOG_INFO("Python interpreter initialised and cocotb loaded!");
 
     // Now that logging has been set up ok we initialise the testbench
+    if (-1 == PyObject_SetAttrString(cocotb_module, "SIM_NAME", PyString_FromString(info->product))) {
+        PyErr_Print();
+        fprintf(stderr, "Unable to set SIM_NAME");
+        goto cleanup;
+    }
+
+    // Set language in use as an attribute to cocotb module, or None if not provided
+    const char *lang = getenv("TOPLEVEL_LANG");
+    PyObject* PyLang;
+    if (lang)
+        PyLang = PyString_FromString(lang);
+    else
+        PyLang = Py_None;
+
+    if (-1 == PyObject_SetAttrString(cocotb_module, "LANGUAGE", PyLang)) {
+        fprintf(stderr, "Unable to set LANGUAGE");
+        goto cleanup;
+    }
 
     // Hold onto a reference to our _fail_test function
     pEventFn = PyObject_GetAttrString(cocotb_module, "_sim_event");
@@ -207,12 +284,14 @@ void embed_sim_init(gpi_sim_info_t *info)
         if (PyErr_Occurred())
             PyErr_Print();
         fprintf(stderr, "Cannot find function \"%s\"\n", "_initialise_testbench");
-        Py_DECREF(cocotb_init);
         goto cleanup;
     }
 
     cocotb_args = PyTuple_New(1);
-    PyTuple_SetItem(cocotb_args, 0, PyLong_FromLong((long)dut));        // Note: This function “steals” a reference to o.
+    if (dut == NULL)
+        PyTuple_SetItem(cocotb_args, 0, Py_BuildValue(""));        // Note: This function “steals” a reference to o.
+    else
+        PyTuple_SetItem(cocotb_args, 0, PyString_FromString(dut));        // Note: This function “steals” a reference to o.
     cocotb_retval = PyObject_CallObject(cocotb_init, cocotb_args);
 
     if (cocotb_retval != NULL) {
@@ -220,14 +299,15 @@ void embed_sim_init(gpi_sim_info_t *info)
         Py_DECREF(cocotb_retval);
     } else {
         PyErr_Print();
-        fprintf(stderr,"Call failed\n");
-        gpi_sim_end();
-        goto cleanup;
+        fprintf(stderr,"Cocotb initialisation failed - exiting\n");
     }
 
     FEXIT
+    goto ok;
 
 cleanup:
+    ret = -1;
+ok:
     if (cocotb_module) {
         Py_DECREF(cocotb_module);
     }
@@ -235,6 +315,8 @@ cleanup:
         Py_DECREF(arg_dict);
     }
     PyGILState_Release(gstate);
+
+    return ret;
 }
 
 void embed_sim_event(gpi_event_t level, const char *msg)
@@ -248,8 +330,12 @@ void embed_sim_event(gpi_event_t level, const char *msg)
 
         PyObject *fArgs = PyTuple_New(2);
         PyTuple_SetItem(fArgs, 0, PyInt_FromLong(level));
-        PyTuple_SetItem(fArgs, 1, PyString_FromString(msg));
-        PyObject *pValue = PyObject_Call(pEventFn, fArgs, NULL);
+
+        if (msg != NULL)
+            PyTuple_SetItem(fArgs, 1, PyString_FromString(msg));
+        else
+            PyTuple_SetItem(fArgs, 1, PyString_FromString("No message provided"));
+        PyObject *pValue = PyObject_CallObject(pEventFn, fArgs);
         if (!pValue) {
             LOG_ERROR("Passing event to upper layer failed");
         }

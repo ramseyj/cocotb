@@ -13,8 +13,100 @@ Cocotb has the following requirements:
 
 * Python 2.6+
 * Python-dev packages
-* A verilog simulator
+* GCC and associated development packages
+* GNU Make
+* A Verilog simulator
 
+Internal development is performed on Linux Mint 17 (x64). We also use Redhat 6.5(x64). Other Redhat and Ubuntu based distributions (x32 and x64) should work too but due fragmented nature of Linux we can not test everything. Instructions are provided for the main distributions we use.
+
+Linux native arch installation
+------------------------------
+
+Ubuntu based installation
+
+.. code-block:: bash
+
+    $> sudo apt-get install git make gcc g++ swig python-dev
+
+This will allow building of the Cocotb libs for use with a 64 bit native simulator. If a 32 bit simulator is being used then additional steps to install 32bit development libraries and python are needed. 
+
+Redhat based installation
+
+.. code-block:: bash
+
+    $> sudo yum install gcc gcc-c++ libstdc++-devel swig python-devel
+
+This will allow building of the Cocotb libs for use with a 64 bit native simulator. If a 32 bit simulator is being used then additional steps to install 32bit development libraries and python are needed. 
+
+
+32 bit Python
+-------------
+
+Additional development libraries are needed for building 32bit python on 64 bit systems.
+
+Ubuntu based installation
+
+.. code-block:: bash
+
+    $> sudo apt-get install libx32gcc1 gcc-4.8-multilib lib32stdc++-4.8-dev
+
+Replace 4.8 with the version of gcc that was installed on the system in the step above. Unlike on Redhat where 32 bit python can co-exist with native python ubuntu requires the source to be downloaded and built.
+
+Redhat based installation
+
+.. code-block:: bash
+
+    $> sudo yum install glibc.i686 glibc-devel.i386 libgcc.i686 libstdc++-devel.i686
+
+
+Specific releases can be downloaded from https://www.python.org/downloads/ .
+
+.. code-block:: bash
+
+    $> wget https://www.python.org/ftp/python/2.7.9/Python-2.7.9.tgz
+    $> tar xvf Python-2.7.9.tgz
+    $> cd Python-2.7.9
+    $> export PY32_DIR=/opt/pym32
+    $> ./configure CC="gcc -m32" LDFLAGS="-L/lib32 -L/usr/lib32 -Lpwd/lib32 -Wl,-rpath,/lib32 -Wl,-rpath,$PY32_DIR/lib" --prefix=$PY32_DIR --enable-shared
+    $> make
+    $> sudo make install
+
+Cocotb can now be built against 32bit python by setting the architecture and placing the 32bit python ahead of the native version in the path when running a test
+
+.. code-block:: bash
+
+    $> export PATH=/opt/pym32/bin
+    $> cd <cocotb_dir>
+    $> ARCH=i686 make
+
+Windows 7 installation
+----------------------
+
+Recent work has been done with the support of the Cocotb community to enable Windows support using the MinGW/Msys environment. Download the MinGQ installer from.
+
+http://sourceforge.net/projects/mingw/files/latest/download?source=files .
+
+Run the GUI installer and specify a directory you would like the environment installed in. The installer will retrieve a list of possible packages, when this is done press continue. The MinGW Installation Manager is then launched.
+
+The following packages need selecting by checking the tick box and selecting "Mark for installation"
+
+.. code-block:: bash
+
+    Basic Installation
+      -- mingw-developer-tools
+      -- mingw32-base
+      -- mingw32-gcc-g++
+      -- msys-base 
+
+From the Installation menu then select "Apply Changes", in the next dialog select "Apply".
+
+When installed a shell can be opened using the "msys.bat" file located under the <install_dir>/msys/1.0/
+
+Python can be downloaded from https://www.python.org/ftp/python/2.7.9/python-2.7.9.msi, other versions of python can be used as well. Run the installer and download to your chosen location.
+
+It is beneficial to add the path to Python to the windows system PATH variable so it can be used easily from inside Msys.
+
+Once inside the Msys shell commands as given here will work as expected.
 
 Running an example
 ------------------
@@ -22,9 +114,7 @@ Running an example
 .. code-block:: bash
 
     $> git clone https://github.com/potentialventures/cocotb
-    $> cd cocotb
-    $> make
-    $> cd examples/endian_swapper
+    $> cd cocotb/examples/endian_swapper/tests
     $> make
 
 To run a test using a different simulator:
@@ -37,20 +127,66 @@ To run a test using a different simulator:
 Running a VHDL example
 ----------------------
 
-The endian swapper example includes both a VHDL and Verlog RTL implementation.  The Cocotb testbench can execute against either implementation using VPI for Verilog and VHPI for VHDL.  To run the test suite against the VHDL implementation use the following command (a VHPI capable simulator must be used):
+The endian swapper example includes both a VHDL and Verilog RTL implementation.  The Cocotb testbench can execute against either implementation using VPI for Verilog and VHPI/FLI for VHDL.  To run the test suite against the VHDL implementation use the following command (a VHPI or FLI capable simulator must be used):
 
 .. code-block:: bash
 
-    $> make SIM=aldec GPI_IMPL=vhpi
+    $> make SIM=aldec TOPLEVEL_LANG=vhdl
 
 
 
-Using cocotb
+Using Cocotb
 ============
 
-A typical cocotb testbench requires no additional RTL code.
+A typical Cocotb testbench requires no additional RTL code.
 The Design Under Test (DUT) is instantiated as the toplevel in the simulator without any wrapper code.
-Cocotb drives stimulus onto the inputs to the DUT (or further down the hierarchy) and monitors the outputs directly from Python.
+Cocotb drives stimulus onto the inputs to the DUT and monitors the outputs directly from Python.
+
+
+Creating a Makefile
+-------------------
+
+To create a Cocotb test we typically have to create a Makefile.  Cocotb provides
+rules which make it easy to get started.  We simply inform Cocotb of the
+source files we need compiling, the toplevel entity to instantiate and the
+python test script to load.
+
+.. code-block:: bash
+
+    VERILOG_SOURCES = $(PWD)/submodule.sv $(PWD)/my_design.sv
+    TOPLEVEL=my_design
+    MODULE=test_my_design
+    include $(COCOTB)/makefiles/Makefile.inc
+    include $(COCOTB)/makefiles/Makefile.sim
+
+We would then create a file called ``test_my_design.py`` containing our tests.
+
+
+Creating a test
+---------------
+
+The test is written in Python.  Assuming we have a toplevel port called ``clk``
+we could create a test file containing the following:
+
+.. code-block:: python
+
+    import cocotb
+    from cocotb.triggers import Timer
+    
+    @cocotb.test()
+    def my_first_test(dut):
+        """
+        Try accessing the design
+        """
+        dut.log.info("Running test!")
+        for cycle in range(10):
+            dut.clk = 0
+            yield Timer(1000)
+            dut.clk = 1
+            yield Timer(1000)
+        dut.log.info("Running test!")
+
+This will drive a square wave clock onto the ``clk`` port of the toplevel.
 
 
 Accessing the design
@@ -72,7 +208,7 @@ The same mechanism can be used to access signals inside the design.
 Assigning values to signals
 ---------------------------
 
-Values can be assigned to signals using either the .value property of a handle object or using direct assignment while traversing the hierarchy
+Values can be assigned to signals using either the .value property of a handle object or using direct assignment while traversing the hierarchy.
 
 .. code-block:: python
     
@@ -101,6 +237,13 @@ Accessing the .value property of a handle object will return a :class:`BinaryVal
     1X1010
     >>> # Resolve the value to an integer (X or Z treated as 0)
     >>> print count.integer
+    42
+
+We can also cast the signal handle directly to an integer:
+
+.. code-block:: python
+    
+    >>> print int(dut.counter)
     42
 
 

@@ -28,10 +28,13 @@
 ******************************************************************************/
 
 #include <Python.h>
+#include "../compat/python3_compat.h"
+#include <gpi_logging.h>
 
 // Used to log using the standard python mechanism
 static PyObject *pLogHandler;
 static PyObject *pLogFilter;
+static enum gpi_log_levels local_level = GPIInfo;
 
 void set_log_handler(void *handler)
 {
@@ -43,6 +46,11 @@ void set_log_filter(void *filter)
 {
     pLogFilter = (PyObject *)filter;
     Py_INCREF(pLogFilter);
+}
+
+void set_log_level(enum gpi_log_levels new_level)
+{
+    local_level = new_level;
 }
 
 // Decode the level into a string matching the Python interpretation
@@ -105,7 +113,7 @@ void gpi_log(const char *name, long level, const char *pathname, const char *fun
     int n;
 
     if (!pLogHandler) {
-        if (level >= 20) {
+        if (level >= GPIInfo) {
             va_start(ap, msg);
             n = vsnprintf(log_buff, LOG_SIZE, msg, ap);
             va_end(ap);
@@ -115,7 +123,7 @@ void gpi_log(const char *name, long level, const char *pathname, const char *fun
             }
  
             fprintf(stdout, "     -.--ns ");
-            fprintf(stdout, "%-8s", log_level(level));
+            fprintf(stdout, "%-9s", log_level(level));
             fprintf(stdout, "%-35s", name);
             fprintf(stdout, "%20s:", pathname);
             fprintf(stdout, "%-4ld", lineno);
@@ -126,38 +134,47 @@ void gpi_log(const char *name, long level, const char *pathname, const char *fun
         return;
     }
 
+    if (level < local_level)
+        return;
+
     // Ignore truncation
     // calling args is level, filename, lineno, msg, function
     //
     PyGILState_STATE gstate = PyGILState_Ensure();
 
     PyObject *check_args = PyTuple_New(1);
-    PyTuple_SetItem(check_args, 0, PyInt_FromLong(level));
+    PyTuple_SetItem(check_args, 0, PyLong_FromLong(level));
     PyObject *retuple = PyObject_CallObject(pLogFilter, check_args);
 
     if (retuple != Py_True) {
-        Py_DECREF(retuple);
         Py_DECREF(check_args);
+        PyGILState_Release(gstate);
         return;
     }
 
     Py_DECREF(retuple);
+    Py_DECREF(check_args);
 
     va_start(ap, msg);
     n = vsnprintf(log_buff, LOG_SIZE, msg, ap);
     va_end(ap);
 
     PyObject *call_args = PyTuple_New(5);
-    PyTuple_SetItem(call_args, 0, PyInt_FromLong(level));           // Note: This function steals a reference.
-    PyTuple_SetItem(call_args, 1, PyString_FromString(pathname));   // Note: This function steals a reference.
-    PyTuple_SetItem(call_args, 2, PyInt_FromLong(lineno));          // Note: This function steals a reference.
-    PyTuple_SetItem(call_args, 3, PyString_FromString(log_buff));   // Note: This function steals a reference.
-    PyTuple_SetItem(call_args, 4, PyString_FromString(funcname));
+    PyTuple_SetItem(call_args, 0, PyLong_FromLong(level));           // Note: This function steals a reference.
+    PyTuple_SetItem(call_args, 1, PyUnicode_FromString(pathname));   // Note: This function steals a reference.
+    PyTuple_SetItem(call_args, 2, PyLong_FromLong(lineno));          // Note: This function steals a reference.
+    PyTuple_SetItem(call_args, 3, PyUnicode_FromString(log_buff));   // Note: This function steals a reference.
+    PyTuple_SetItem(call_args, 4, PyUnicode_FromString(funcname));
 
     retuple = PyObject_CallObject(pLogHandler, call_args);
+
+    if (retuple != Py_True) {
+        PyGILState_Release(gstate);
+        return;
+    }
+
     Py_DECREF(call_args);
     Py_DECREF(retuple);
-    Py_DECREF(check_args);
 
     PyGILState_Release(gstate);
 }

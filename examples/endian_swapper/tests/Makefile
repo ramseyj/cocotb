@@ -27,34 +27,36 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ###############################################################################
 
+# Default to verilog
+TOPLEVEL_LANG ?= verilog
 
-# Override this variable to use VHPI instead of VPI
-GPI_IMPL ?= vpi
-
-
-TOPLEVEL = endian_swapper
-
+WPWD=$(shell sh -c 'pwd -W')
 PWD=$(shell pwd)
 COCOTB=$(PWD)/../../..
 
-
-ifeq ($(GPI_IMPL),vpi)
-    VERILOG_SOURCES = $(PWD)/../hdl/endian_swapper.sv
+ifeq ($(OS),Msys)
+WPWD=$(shell sh -c 'pwd -W')
+PYTHONPATH := $(PWD)/../cosim;$(PYTHONPATH)
+else
+WPWD=$(shell pwd)
+PYTHONPATH := $(PWD)/../cosim:$(PYTHONPATH)
 endif
 
-ifeq ($(GPI_IMPL),vhpi)
-    VHDL_SOURCES = $(PWD)/../hdl/endian_swapper.vhdl
+ifeq ($(TOPLEVEL_LANG),verilog)
+    VERILOG_SOURCES = $(WPWD)/../hdl/endian_swapper.sv
+    TOPLEVEL = endian_swapper_sv
+else ifeq ($(TOPLEVEL_LANG),vhdl)
+    VHDL_SOURCES = $(WPWD)/../hdl/endian_swapper.vhdl
+    TOPLEVEL = endian_swapper_vhdl
+else
+    $(error "A valid value (verilog or vhdl) was not provided for TOPLEVEL_LANG=$(TOPLEVEL_LANG)")
 endif
 
 MODULE=test_endian_swapper
 
 CUSTOM_COMPILE_DEPS = hal
-PYTHONPATH := $(PWD)/../cosim:$(PYTHONPATH)
-export PYTHONPATH
 
 LD_LIBRARY_PATH := $(PWD)/../cosim:$(LD_LIBRARY_PATH)
-export LD_LIBRARY_PATH
-
 
 include $(COCOTB)/makefiles/Makefile.inc
 include $(COCOTB)/makefiles/Makefile.sim
@@ -64,7 +66,7 @@ hal:
 	-cd ../cosim && make
 
 # Stuff below is useful for profiling
-# Need grof2dot from https://code.google.com/p/jrfonseca.gprof2dot/
+# Need grof2dot from https://github.com/jrfonseca/gprof2dot
 test_profile.pstat: sim
 
 callgraph.svg: test_profile.pstat
@@ -78,5 +80,5 @@ profile:
 clean::
 	-rm -rf test_profile.pstat
 	-rm -rf callgraph.svg
-
+	-cd ../cosim && make clean
 

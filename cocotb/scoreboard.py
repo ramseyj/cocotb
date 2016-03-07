@@ -40,7 +40,7 @@ from cocotb.result import TestFailure, TestSuccess
 
 
 class Scoreboard(object):
-    """Generic scorboarding class
+    """Generic scoreboarding class
 
     We can add interfaces by providing a monitor and an expected output queue
 
@@ -60,19 +60,23 @@ class Scoreboard(object):
 
     @property
     def result(self):
-        """determine the test result - do we have any pending data remaining?"""
+        """Determine the test result, do we have any pending data remaining?"""
         fail = False
-        for monitor, expected_output in self.expected.iteritems():
+        for monitor, expected_output in self.expected.items():
             if callable(expected_output):
-                self.log.debug("Can't check all data returned for %s since expected output is \
-                                callable function rather than a list" % str(monitor))
+                self.log.debug("Can't check all data returned for %s since "
+                               "expected output is callable function rather "
+                               "than a list" % str(monitor))
                 continue
             if len(expected_output):
-                self.log.warn("Still expecting %d transactions on %s" % (len(expected_output), str(monitor)))
+                self.log.warn("Still expecting %d transactions on %s" %
+                              (len(expected_output), str(monitor)))
                 for index, transaction in enumerate(expected_output):
-                    self.log.info("Expecting %d:\n%s" % (index, hexdump(str(transaction))))
+                    self.log.info("Expecting %d:\n%s" %
+                                  (index, hexdump(str(transaction))))
                     if index > 5:
-                        self.log.info("... and %d more to come" % (len(expected_output) - index - 1))
+                        self.log.info("... and %d more to come" %
+                                      (len(expected_output) - index - 1))
                         break
                 fail = True
         if fail:
@@ -81,71 +85,117 @@ class Scoreboard(object):
             return TestFailure("Errors were recorded during the test")
         return TestSuccess()
 
-    def add_interface(self, monitor, expected_output, compare_fn=None):
+    def compare(self, got, exp, log, strict_type=True):
+        """
+        Common function for comparing two transactions.
+
+        Can be re-implemented by a subclass.
+        """
+
+        # Compare the types
+        if strict_type and type(got) != type(exp):
+            self.errors += 1
+            log.error("Received transaction is a different type to expected "
+                      "transaction")
+            log.info("Got: %s but expected %s" %
+                     (str(type(got)), str(type(exp))))
+            if self._imm:
+                raise TestFailure("Received transaction of wrong type")
+            return
+        # Or convert to a string before comparison
+        elif not strict_type:
+            got, exp = str(got), str(exp)
+
+        # Compare directly
+        if got != exp:
+            self.errors += 1
+
+            # Try our best to print out something useful
+            strgot, strexp = str(got), str(exp)
+
+            log.error("Received transaction differed from expected output")
+            log.info("Expected:\n" + hexdump(strexp))
+            if not isinstance(exp, str):
+                try:
+                    for word in exp:
+                        log.info(str(word))
+                except:
+                    pass
+            log.info("Received:\n" + hexdump(strgot))
+            if not isinstance(got, str):
+                try:
+                    for word in got:
+                        log.info(str(word))
+                except:
+                    pass
+            log.warning("Difference:\n%s" % hexdiffs(strexp, strgot))
+            if self._imm:
+                raise TestFailure("Received transaction differed from expected"
+                                  "transaction")
+        else:
+            # Don't want to fail the test
+            # if we're passed something without __len__
+            try:
+                log.debug("Received expected transaction %d bytes" %
+                          (len(got)))
+                log.debug(repr(got))
+            except:
+                pass
+
+    def add_interface(self, monitor, expected_output, compare_fn=None,
+                      reorder_depth=0, strict_type=True):
         """Add an interface to be scoreboarded.
 
-            Provides a function which the monitor will callback with received transactions
+            Provides a function which the monitor will callback with received
+            transactions
 
             Simply check against the expected output.
 
         """
-        # save a handle to the expected output so we can check if all expected data has
-        # been received at the end of a test.
+        # save a handle to the expected output so we can check if all expected
+        # data has been received at the end of a test.
         self.expected[monitor] = expected_output
 
         # Enforce some type checking as we only work with a real monitor
         if not isinstance(monitor, Monitor):
-            raise TypeError("Expected monitor on the interface but got %s" % (monitor.__class__.__name__))
+            raise TypeError("Expected monitor on the interface but got %s" %
+                            (monitor.__class__.__name__))
 
         if compare_fn is not None:
             if callable(compare_fn):
                 monitor.add_callback(compare_fn)
                 return
-            raise TypeError("Expected a callable compare function but got %s" % str(type(compare_fn)))
+            raise TypeError("Expected a callable compare function but got %s" %
+                            str(type(compare_fn)))
+
+        self.log.info("Created with reorder_depth %d" % reorder_depth)
 
         def check_received_transaction(transaction):
-            """Called back by the monitor when a new transaction has been received"""
+            """Called back by the monitor when a new transaction has been
+            received"""
 
             log = logging.getLogger(self.log.name + '.' + monitor.name)
 
             if callable(expected_output):
                 exp = expected_output(transaction)
+
             elif len(expected_output):
-                exp = expected_output.pop(0)
+                for i in range(min((reorder_depth + 1), len(expected_output))):
+                    if expected_output[i] == transaction:
+                        break
+                else:
+                    i = 0
+                exp = expected_output.pop(i)
             else:
                 self.errors += 1
-                log.error("Received a transaction but wasn't expecting anything")
+                log.error("Received a transaction but wasn't expecting "
+                          "anything")
                 log.info("Got: %s" % (hexdump(str(transaction))))
-                if self._imm: raise TestFailure("Received a transaction but wasn't expecting anything")
+                if self._imm:
+                    raise TestFailure("Received a transaction but wasn't "
+                                      "expecting anything")
                 return
 
-            if type(transaction) != type(exp):
-                self.errors += 1
-                log.error("Received transaction is a different type to expected transaction")
-                log.info("Got: %s but expected %s" % (str(type(transaction)), str(type(exp))))
-                if self._imm: raise TestFailure("Received transaction of wrong type")
-                return
-
-            if transaction != exp:
-                self.errors += 1
-                log.error("Received transaction differed from expected output")
-                log.info("Expected:\n" + hexdump(exp))
-                if not isinstance(exp, str):
-                    try:
-                        for word in exp: self.log.info(str(word))
-                    except: pass
-                log.info("Received:\n" + hexdump(transaction))
-                if not isinstance(transaction, str):
-                    try:
-                        for word in transaction: self.log.info(str(word))
-                    except: pass
-                log.warning("Difference:\n%s" % hexdiffs(exp, transaction))
-                if self._imm: raise TestFailure("Received transaction differed from expected transaction")
-            else:
-                # Don't want to fail the test if we're passed something without __len__
-                try:
-                    log.debug("Received expected transaction %d bytes" % (len(transaction)))
-                    log.debug(repr(transaction))
-                except: pass
+            self.compare(transaction, exp, log, strict_type=strict_type)
 
         monitor.add_callback(check_received_transaction)
