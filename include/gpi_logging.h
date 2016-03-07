@@ -41,7 +41,7 @@
 EXTERN_C_START
 
 enum gpi_log_levels {
-    GPIDebug= 10,
+    GPIDebug = 10,
     GPIInfo = 20,
     GPIWarning = 30,
     GPIError = 40,
@@ -53,7 +53,10 @@ enum gpi_log_levels {
 #define LOG_INFO(...)      gpi_log("cocotb.gpi", GPIInfo,          __FILE__, __func__, __LINE__, __VA_ARGS__);
 #define LOG_WARN(...)      gpi_log("cocotb.gpi", GPIWarning,       __FILE__, __func__, __LINE__, __VA_ARGS__);
 #define LOG_ERROR(...)     gpi_log("cocotb.gpi", GPIError,         __FILE__, __func__, __LINE__, __VA_ARGS__);
-#define LOG_CRITICAL(...)  gpi_log("cocotb.gpi", GPICritical,      __FILE__, __func__, __LINE__, __VA_ARGS__);
+#define LOG_CRITICAL(...)  do { \
+    gpi_log("cocotb.gpi", GPICritical,      __FILE__, __func__, __LINE__, __VA_ARGS__); \
+    exit(1); \
+} while (0)
 
 // #ifdef DEBUG
 // #define FENTER LOG_DEBUG(__func__)
@@ -66,6 +69,7 @@ enum gpi_log_levels {
 void set_log_handler(void *handler);
 void set_make_record(void *makerecord);
 void set_log_filter(void *filter);
+void set_log_level(enum gpi_log_levels new_level);
 
 void gpi_log(const char *name, long level, const char *pathname, const char *funcname, long lineno, const char *msg, ...);
 

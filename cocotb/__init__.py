@@ -55,9 +55,21 @@ from cocotb.decorators import test, coroutine, function, external
 # GPI logging instance
 # For autodocumentation don't need the extension modules
 if "SPHINX_BUILD" not in os.environ:
+    import simulator
     logging.basicConfig()
     logging.setLoggerClass(SimBaseLog)
-    log = SimLog('cocotb.gpi')
+    log = SimLog('cocotb')
+    level = os.getenv("COCOTB_LOG_LEVEL", "INFO")
+    try:
+        _default_log = getattr(logging, level)
+    except AttributeError as e:
+        log.error("Unable to set loging level to %s" % level)
+        _default_log = logging.INFO
+    log.setLevel(_default_log)
+    loggpi = SimLog('cocotb.gpi')
+    # Notify GPI of log level
+    simulator.log_level(_default_log)
+
 
 scheduler = Scheduler()
 regression = None
@@ -70,9 +82,11 @@ fork = scheduler.add
 # FIXME is this really required?
 _rlock = threading.RLock()
 
+
 def mem_debug(port):
     import cocotb.memdebug
-    memdebug.start(port)
+    cocotb.memdebug.start(port)
+
 
 def _initialise_testbench(root_name):
     """
@@ -89,16 +103,6 @@ def _initialise_testbench(root_name):
     if memcheck_port is not None:
         mem_debug(int(memcheck_port))
 
-    # Seed the Python random number generator to make this repeatable
-    seed = os.getenv('RANDOM_SEED')
-    if seed is None:
-        seed = int(time.time())
-        log.info("Seeding Python random module with %d" % (seed))
-    else:
-        seed = int(seed)
-        log.info("Seeding Python random module with supplied seed %d" % (seed))
-    random.seed(seed)
-
     exec_path = os.getenv('SIM_ROOT')
     if exec_path is None:
         exec_path = 'Unknown'
@@ -107,11 +111,28 @@ def _initialise_testbench(root_name):
     if version is None:
         log.info("Unable to determine Cocotb version from %s" % exec_path)
     else:
-        log.info("Running tests with Cocotb v%s from %s" % (version, exec_path))
+        log.info("Running tests with Cocotb v%s from %s" %
+                 (version, exec_path))
 
     # Create the base handle type
 
     process_plusargs()
+
+    # Seed the Python random number generator to make this repeatable
+    seed = os.getenv('RANDOM_SEED')
+
+    if seed is None:
+        if 'ntb_random_seed' in plusargs:
+            seed = eval(plusargs['ntb_random_seed'])
+        elif 'seed' in plusargs:
+            seed = eval(plusargs['seed'])
+        else:
+            seed = int(time.time())
+        log.info("Seeding Python random module with %d" % (seed))
+    else:
+        seed = int(seed)
+        log.info("Seeding Python random module with supplied seed %d" % (seed))
+    random.seed(seed)
 
     module_str = os.getenv('MODULE')
     test_str = os.getenv('TESTCASE')
@@ -131,6 +152,7 @@ def _initialise_testbench(root_name):
     _rlock.release()
     return True
 
+
 def _sim_event(level, message):
     """Function that can be called externally to signal an event"""
     SIM_INFO = 0
@@ -140,11 +162,15 @@ def _sim_event(level, message):
 
     if level is SIM_TEST_FAIL:
         scheduler.log.error("Failing test at simulator request")
-        scheduler.finish_test(TestFailure("Failure from external source: %s" % message))
+        scheduler.finish_test(TestFailure("Failure from external source: %s" %
+                              message))
     elif level is SIM_FAIL:
-        # We simply return here as the simulator will exit so no cleanup is needed
-        scheduler.log.error("Failing test at simulator request before test run completion: %s" % message)
-        scheduler.finish_scheduler(SimFailure("Failing test at simulator request before test run completion %s" % message))
+        # We simply return here as the simulator will exit
+        # so no cleanup is needed
+        msg = ("Failing test at simulator request before test run completion: "
+               "%s" % message)
+        scheduler.log.error(msg)
+        scheduler.finish_scheduler(SimFailure(msg))
     else:
         scheduler.log.error("Unsupported sim event")
 
@@ -164,4 +190,3 @@ def process_plusargs():
                 plusargs[name] = value
             else:
                 plusargs[option[1:]] = True
-

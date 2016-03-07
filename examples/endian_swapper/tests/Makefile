@@ -27,8 +27,7 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ###############################################################################
 
-
-# Override this variable to use VHPI instead of VPI
+# Default to verilog
 TOPLEVEL_LANG ?= verilog
 
 WPWD=$(shell sh -c 'pwd -W')
@@ -42,28 +41,22 @@ else
 WPWD=$(shell pwd)
 PYTHONPATH := $(PWD)/../cosim:$(PYTHONPATH)
 endif
-export PYTHONPATH
 
 ifeq ($(TOPLEVEL_LANG),verilog)
     VERILOG_SOURCES = $(WPWD)/../hdl/endian_swapper.sv
     TOPLEVEL = endian_swapper_sv
-    GPI_IMPL=vpi
-endif
-
-ifeq ($(TOPLEVEL_LANG),vhdl)
+else ifeq ($(TOPLEVEL_LANG),vhdl)
     VHDL_SOURCES = $(WPWD)/../hdl/endian_swapper.vhdl
     TOPLEVEL = endian_swapper_vhdl
-    GPI_IMPL=vhpi
+else
+    $(error "A valid value (verilog or vhdl) was not provided for TOPLEVEL_LANG=$(TOPLEVEL_LANG)")
 endif
-
-export TOPLEVEL_LANG
 
 MODULE=test_endian_swapper
 
 CUSTOM_COMPILE_DEPS = hal
 
 LD_LIBRARY_PATH := $(PWD)/../cosim:$(LD_LIBRARY_PATH)
-export LD_LIBRARY_PATH
 
 include $(COCOTB)/makefiles/Makefile.inc
 include $(COCOTB)/makefiles/Makefile.sim
@@ -73,7 +66,7 @@ hal:
 	-cd ../cosim && make
 
 # Stuff below is useful for profiling
-# Need grof2dot from https://code.google.com/p/jrfonseca.gprof2dot/
+# Need grof2dot from https://github.com/jrfonseca/gprof2dot
 test_profile.pstat: sim
 
 callgraph.svg: test_profile.pstat
