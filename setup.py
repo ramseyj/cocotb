@@ -6,7 +6,7 @@ from sys import argv
 from subprocess import Popen
 import codecs
 
-VERSION = '0.4.1-rtl'
+VERSION = '1.0-rtl'
 
 DEBUG = False
 
@@ -25,10 +25,11 @@ def copyFile(src, dest):
 
 def installFiles():
     print("Copying files.")
-    copyFile("build\\libs\\x86_64\\libcocotb.dll", environ['WINDIR'] + "\\System32\\")
-    copyFile("build\\libs\\x86_64\\libgpi.dll", environ['WINDIR'] + "\\System32\\")
-    copyFile("build\\libs\\x86_64\\libgpilog.dll", environ['WINDIR'] + "\\System32\\")
-    copyFile("build\\libs\\x86_64\\libsim.dll", distutils.sysconfig.PREFIX + "\\DLLs\\simulator.pyd")
+    copyFile("build\\libs\\i686\\libcocotb.dll", environ['WINDIR'] + "\\System32\\")
+    copyFile("build\\libs\\i686\\libgpi.dll", environ['WINDIR'] + "\\System32\\")
+    copyFile("build\\libs\\i686\\libgpilog.dll", environ['WINDIR'] + "\\System32\\")
+    copyFile("build\\libs\\i686\\libvhpi.dll", environ['WINDIR'] + "\\System32\\")
+    copyFile("build\\libs\\i686\\libsim.dll", distutils.sysconfig.PREFIX + "\\DLLs\\simulator.pyd")
     copyFile("lib\\libgcc_s_dw2-1.dll", environ['WINDIR'] + "\\System32\\")
 
 def packageFiles():

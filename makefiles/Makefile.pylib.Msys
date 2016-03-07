@@ -49,7 +49,7 @@ PYTHON_LIBDIR=$(PYTHON_DIR)/libs
 period := .
 empty := 
 PYTHON_VERSION=$(subst $(period),$(empty),$(LOCAL_PYTHON_VERSION))
-PYTHON_INCLUDEDIR := $(shell $(PYTHON_BIN) -c 'import distutils.sysconfig; print distutils.sysconfig.get_python_inc()')
-
+# PYTHON_INCLUDEDIR := $(shell $(PYTHON_BIN) -c 'import distutils.sysconfig; print distutils.sysconfig.get_python_inc()')
+PYTHON_INCLUDEDIR := $(shell $(PYTHON_BIN) -c 'import distutils.sysconfig; print distutils.sysconfig.get_python_inc().replace("\\","/")')
 PYLIBS = -lPython$(PYTHON_VERSION)
 PYTHON_DYN_LIB = Python$(PYTHON_VERSION).dll

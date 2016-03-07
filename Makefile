@@ -30,7 +30,8 @@
 INSTALL_DIR?=/usr/local
 FULL_INSTALL_DIR=$(INSTALL_DIR)/cocotb-$(VERSION)
 
-all: test
+all:	
+	$(MAKE) -k -C makefiles default
 
 include makefiles/Makefile.inc
 include version
